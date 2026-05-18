@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LightBase Desktop Client</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+        }
+        h1 { color: #61afef; }
+        .console {
+            background-color: #1e1e1e;
+            border: 1px solid #3e3e3e;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', Courier, monospace;
+            white-space: pre-wrap;
+        }
+        button {
+            background-color: #98c379;
+            border: none;
+            color: #121212;
+            padding: 10px 20px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover { background-color: #7cb35b; }
+    </style>
+</head>
+<body>
+
+<h1>LightBase Client</h1>
+<p>Status: <span id="status" style="color: #e5c07b;">Connecting...</span></p>
+
+<button onclick="sendTestQuery()">Trigger C-Core Query</button>
+
+<h3>Response Stream:</h3>
+<div id="output" class="console">Click the button to test the stack...</div>
+
+<hr style="border: 1px solid #3e3e3e; margin: 20px 0;">
+<h2>Real Network Request via C Sockets</h2>
+<button onclick="fireRealNetworkRequest()" style="background-color: #61afef;">Get Live Post Data</button>
+
+<hr style="border: 1px solid #3e3e3e; margin: 20px 0;">
+<h2>Local SQLite Engine</h2>
+<button onclick="runLocalDatabaseQuery()" style="background-color: #e5c07b; color: #121212;">Query Local Database</button>
+
+<script>
+    async function sendTestQuery() {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerText = "Sending query to C-Core...";
+
+        try {
+            // We'll point this to our local Python bridge server
+            const response = await fetch('http://localhost:8000/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: "SELECT * FROM users LIMIT 3;" })
+            });
+
+            const data = await response.json();
+            outputDiv.innerText = JSON.stringify(data, null, 2);
+            document.getElementById('status').innerText = "Connected & Active";
+            document.getElementById('status').style.color = "#98c379";
+        } catch (err) {
+            outputDiv.innerText = "Error connecting to LightBase Core: " + err.message;
+            document.getElementById('status').innerText = "Core Offline";
+            document.getElementById('status').style.color = "#e06c75";
+        }
+    }
+
+    async function fireRealNetworkRequest() {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerText = "C-Core is parsing sockets and shaking hands...";
+
+        try {
+            const response = await fetch('http://localhost:8000/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    hostname: "jsonplaceholder.typicode.com",
+                    path: "/posts/1"
+                })
+            });
+
+            const data = await response.json();
+            outputDiv.innerText = JSON.stringify(data, null, 2);
+        } catch (err) {
+            outputDiv.innerText = "Network engine error: " + err.message;
+        }
+    }
+
+    async function runLocalDatabaseQuery() {
+        const outputDiv = document.getElementById('output');
+        outputDiv.innerText = "C-Core dynamically parsing engine execution handles...";
+
+        try {
+            const complexQuery = `
+                CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
+                INSERT INTO users (name) VALUES ('bbox_developer');
+                SELECT * FROM users;
+            `;
+
+            const response = await fetch('http://localhost:8000/local_db', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    db_path: "test_lightbase.db",
+                    query: complexQuery
+                })
+            });
+
+            const data = await response.json();
+            outputDiv.innerText = JSON.stringify(data, null, 2);
+        } catch (err) {
+            outputDiv.innerText = "Database engine error: " + err.message;
+        }
+    }
+</script>
+</body>
+</html>

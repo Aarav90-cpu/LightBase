@@ -3,5 +3,9 @@
   <component name="Black">
     <option name="sdkName" value="uv (bridge)" />
   </component>
+  <component name="CMakePythonSetting">
+    <option name="pythonIntegrationState" value="YES" />
+  </component>
+  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$/core" />
   <component name="ProjectRootManager" version="2" project-jdk-name="uv (bridge)" project-jdk-type="Python SDK" />
 </project>

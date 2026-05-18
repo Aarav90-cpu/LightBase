@@ -1,0 +1,1 @@
+/usr/bin/cc -fPIC -O3 -march=native -flto -s -shared -Wl,--dependency-file=CMakeFiles/core.dir/link.d -Wl,-soname,libcore.so -o libcore.so CMakeFiles/core.dir/src/engine.c.o  -ldl
