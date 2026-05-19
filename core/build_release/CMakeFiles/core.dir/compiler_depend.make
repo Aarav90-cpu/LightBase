@@ -180,16 +180,30 @@ CMakeFiles/core.dir/src/storage.c.o: /home/aarav/LightBase/core/src/storage.c \
   /usr/include/alloca.h \
   /usr/include/bits/atomic_wide_counter.h \
   /usr/include/bits/byteswap.h \
+  /usr/include/bits/cloexec.h \
+  /usr/include/bits/confname.h \
   /usr/include/bits/dlfcn.h \
   /usr/include/bits/endian.h \
   /usr/include/bits/endianness.h \
+  /usr/include/bits/environments.h \
+  /usr/include/bits/fcntl-linux.h \
+  /usr/include/bits/fcntl.h \
   /usr/include/bits/floatn-common.h \
   /usr/include/bits/floatn.h \
+  /usr/include/bits/getopt_core.h \
+  /usr/include/bits/getopt_posix.h \
   /usr/include/bits/libc-header-start.h \
   /usr/include/bits/long-double.h \
+  /usr/include/bits/mman-linux.h \
+  /usr/include/bits/mman-map-flags-generic.h \
+  /usr/include/bits/mman-shared.h \
+  /usr/include/bits/mman.h \
+  /usr/include/bits/mman_ext.h \
+  /usr/include/bits/posix_opt.h \
   /usr/include/bits/pthreadtypes-arch.h \
   /usr/include/bits/pthreadtypes.h \
   /usr/include/bits/select.h \
+  /usr/include/bits/stat.h \
   /usr/include/bits/stdint-intn.h \
   /usr/include/bits/stdint-least.h \
   /usr/include/bits/stdint-uintn.h \
@@ -199,6 +213,7 @@ CMakeFiles/core.dir/src/storage.c.o: /home/aarav/LightBase/core/src/storage.c \
   /usr/include/bits/stdlib-float.h \
   /usr/include/bits/struct_mutex.h \
   /usr/include/bits/struct_rwlock.h \
+  /usr/include/bits/struct_stat.h \
   /usr/include/bits/thread-shared-types.h \
   /usr/include/bits/time.h \
   /usr/include/bits/time64.h \
@@ -225,12 +240,14 @@ CMakeFiles/core.dir/src/storage.c.o: /home/aarav/LightBase/core/src/storage.c \
   /usr/include/bits/types/timer_t.h \
   /usr/include/bits/typesizes.h \
   /usr/include/bits/uintn-identity.h \
+  /usr/include/bits/unistd_ext.h \
   /usr/include/bits/waitflags.h \
   /usr/include/bits/waitstatus.h \
   /usr/include/bits/wchar.h \
   /usr/include/bits/wordsize.h \
   /usr/include/dlfcn.h \
   /usr/include/endian.h \
+  /usr/include/fcntl.h \
   /usr/include/features-time64.h \
   /usr/include/features.h \
   /usr/include/gnu/stubs-64.h \
@@ -242,9 +259,12 @@ CMakeFiles/core.dir/src/storage.c.o: /home/aarav/LightBase/core/src/storage.c \
   /usr/include/string.h \
   /usr/include/strings.h \
   /usr/include/sys/cdefs.h \
+  /usr/include/sys/mman.h \
   /usr/include/sys/select.h \
+  /usr/include/sys/stat.h \
   /usr/include/sys/types.h \
   /usr/include/time.h \
+  /usr/include/unistd.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdint.h
@@ -376,8 +396,6 @@ CMakeFiles/core.dir/src/engine.c.o:
 
 /usr/lib/libc.so.6:
 
-/usr/lib/ld-linux-x86-64.so.2:
-
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o:
@@ -385,6 +403,18 @@ CMakeFiles/core.dir/src/engine.c.o:
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o:
 
 /usr/lib/libgcc_s_asneeded.so:
+
+/usr/lib/libgcc_s.so:
+
+/usr/lib/libc.so:
+
+/usr/lib/libatomic_asneeded.so:
+
+/home/aarav/LightBase/core/src/tlv.c:
+
+/home/aarav/LightBase/core/src/sys_monitor.c:
+
+/usr/include/sys/mman.h:
 
 /home/aarav/LightBase/core/include/sys_monitor.h:
 
@@ -408,9 +438,17 @@ CMakeFiles/core.dir/src/engine.c.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stddef.h:
 
+/usr/lib/libdl.a:
+
+/usr/include/bits/types/struct_tm.h:
+
 /usr/include/bits/wordsize.h:
 
 /usr/include/bits/uintn-identity.h:
+
+/usr/lib/crti.o:
+
+/usr/include/bits/typesizes.h:
 
 /usr/include/bits/cpu-set.h:
 
@@ -434,8 +472,6 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/stdlib.h:
 
-/usr/include/bits/types/time_t.h:
-
 /usr/include/bits/types/struct_itimerspec.h:
 
 /usr/include/bits/struct_rwlock.h:
@@ -446,15 +482,15 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/bits/types/locale_t.h:
 
-/usr/include/bits/types/struct_tm.h:
-
-/usr/lib/libdl.a:
+/usr/include/bits/mman-shared.h:
 
 /usr/include/bits/pthreadtypes.h:
 
 /usr/include/bits/floatn.h:
 
 /home/aarav/LightBase/core/include/arena.h:
+
+/usr/include/fcntl.h:
 
 /usr/include/gnu/stubs.h:
 
@@ -466,7 +502,11 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/bits/types/clockid_t.h:
 
-/usr/include/strings.h:
+/usr/lib/libatomic.so:
+
+/usr/include/features.h:
+
+/usr/include/bits/endianness.h:
 
 /usr/include/bits/libc-header-start.h:
 
@@ -488,8 +528,6 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/bits/timesize.h:
 
-/home/aarav/LightBase/core/src/tlv.c:
-
 /usr/include/bits/types/__sigset_t.h:
 
 /usr/include/stdc-predef.h:
@@ -507,6 +545,10 @@ CMakeFiles/core.dir/src/tlv.c.o:
 /usr/include/bits/struct_mutex.h:
 
 /usr/include/bits/stdint-intn.h:
+
+/usr/include/bits/mman_ext.h:
+
+/usr/include/bits/mman-linux.h:
 
 /usr/include/alloca.h:
 
@@ -552,6 +594,10 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/asm/posix_types_64.h:
 
+/usr/lib/ld-linux-x86-64.so.2:
+
+/usr/include/bits/stat.h:
+
 /usr/include/bits/setjmp.h:
 
 /usr/include/bits/types/struct___jmp_buf_tag.h:
@@ -560,11 +606,17 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 /usr/include/bits/pthread_stack_min-dynamic.h:
 
+/usr/lib/libgcc_s.so.1:
+
+/usr/include/bits/confname.h:
+
 /home/aarav/LightBase/core/src/storage.c:
 
 /usr/include/bits/dlfcn.h:
 
 CMakeFiles/core.dir/src/sys_monitor.c.o:
+
+/usr/include/bits/cloexec.h:
 
 /usr/include/bits/getopt_posix.h:
 
@@ -592,6 +644,10 @@ CMakeFiles/core.dir/src/sys_monitor.c.o:
 
 /usr/include/bits/unistd_ext.h:
 
+/usr/include/strings.h:
+
+/usr/include/bits/fcntl-linux.h:
+
 /usr/include/bits/types/FILE.h:
 
 /usr/include/bits/types/__fpos64_t.h:
@@ -599,6 +655,8 @@ CMakeFiles/core.dir/src/sys_monitor.c.o:
 /usr/include/bits/types/clock_t.h:
 
 /usr/include/bits/types/__fpos_t.h:
+
+/usr/include/sys/stat.h:
 
 /usr/include/bits/types/struct_FILE.h:
 
@@ -614,34 +672,22 @@ CMakeFiles/core.dir/src/sys_monitor.c.o:
 
 /usr/include/pthread.h:
 
-/home/aarav/LightBase/core/src/sys_monitor.c:
-
-/usr/include/unistd.h:
-
-/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h:
-
-/usr/include/bits/typesizes.h:
-
-/usr/lib/crti.o:
+/usr/lib/crtn.o:
 
 /usr/include/asm/socket.h:
 
 /usr/include/sys/un.h:
 
-/usr/lib/crtn.o:
+/usr/include/unistd.h:
 
-/usr/include/features.h:
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h:
 
-/usr/include/bits/endianness.h:
+/usr/include/bits/fcntl.h:
 
-/usr/lib/libatomic.so:
+/usr/include/bits/mman-map-flags-generic.h:
 
-/usr/lib/libatomic_asneeded.so:
+/usr/include/bits/mman.h:
 
-/usr/lib/libc.so:
+/usr/include/bits/types/time_t.h:
 
-/usr/lib/libgcc_s.so:
-
-/usr/include/bits/confname.h:
-
-/usr/lib/libgcc_s.so.1:
+/usr/include/bits/struct_stat.h:
