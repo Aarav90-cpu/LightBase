@@ -174,6 +174,30 @@ core/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/build
 .PHONY : core/fast
 
+src/arena.o: src/arena.c.o
+.PHONY : src/arena.o
+
+# target to build an object file
+src/arena.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/arena.c.o
+.PHONY : src/arena.c.o
+
+src/arena.i: src/arena.c.i
+.PHONY : src/arena.i
+
+# target to preprocess a source file
+src/arena.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/arena.c.i
+.PHONY : src/arena.c.i
+
+src/arena.s: src/arena.c.s
+.PHONY : src/arena.s
+
+# target to generate assembly for a file
+src/arena.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/arena.c.s
+.PHONY : src/arena.c.s
+
 src/engine.o: src/engine.c.o
 .PHONY : src/engine.o
 
@@ -198,6 +222,78 @@ src/engine.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/engine.c.s
 .PHONY : src/engine.c.s
 
+src/storage.o: src/storage.c.o
+.PHONY : src/storage.o
+
+# target to build an object file
+src/storage.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/storage.c.o
+.PHONY : src/storage.c.o
+
+src/storage.i: src/storage.c.i
+.PHONY : src/storage.i
+
+# target to preprocess a source file
+src/storage.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/storage.c.i
+.PHONY : src/storage.c.i
+
+src/storage.s: src/storage.c.s
+.PHONY : src/storage.s
+
+# target to generate assembly for a file
+src/storage.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/storage.c.s
+.PHONY : src/storage.c.s
+
+src/sys_monitor.o: src/sys_monitor.c.o
+.PHONY : src/sys_monitor.o
+
+# target to build an object file
+src/sys_monitor.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/sys_monitor.c.o
+.PHONY : src/sys_monitor.c.o
+
+src/sys_monitor.i: src/sys_monitor.c.i
+.PHONY : src/sys_monitor.i
+
+# target to preprocess a source file
+src/sys_monitor.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/sys_monitor.c.i
+.PHONY : src/sys_monitor.c.i
+
+src/sys_monitor.s: src/sys_monitor.c.s
+.PHONY : src/sys_monitor.s
+
+# target to generate assembly for a file
+src/sys_monitor.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/sys_monitor.c.s
+.PHONY : src/sys_monitor.c.s
+
+src/tlv.o: src/tlv.c.o
+.PHONY : src/tlv.o
+
+# target to build an object file
+src/tlv.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/tlv.c.o
+.PHONY : src/tlv.c.o
+
+src/tlv.i: src/tlv.c.i
+.PHONY : src/tlv.i
+
+# target to preprocess a source file
+src/tlv.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/tlv.c.i
+.PHONY : src/tlv.c.i
+
+src/tlv.s: src/tlv.c.s
+.PHONY : src/tlv.s
+
+# target to generate assembly for a file
+src/tlv.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/tlv.c.s
+.PHONY : src/tlv.c.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -211,9 +307,21 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... core"
+	@echo "... src/arena.o"
+	@echo "... src/arena.i"
+	@echo "... src/arena.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"
+	@echo "... src/storage.o"
+	@echo "... src/storage.i"
+	@echo "... src/storage.s"
+	@echo "... src/sys_monitor.o"
+	@echo "... src/sys_monitor.i"
+	@echo "... src/sys_monitor.s"
+	@echo "... src/tlv.o"
+	@echo "... src/tlv.i"
+	@echo "... src/tlv.s"
 .PHONY : help
 
 

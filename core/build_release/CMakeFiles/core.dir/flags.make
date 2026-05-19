@@ -6,5 +6,5 @@ C_DEFINES = -Dcore_EXPORTS
 
 C_INCLUDES = -I/home/aarav/LightBase/core/include
 
-C_FLAGS = -O3 -march=native -flto -s -std=gnu99 -fPIC
+C_FLAGS = -O3 -march=native -flto -s -z noexecstack -std=gnu99 -fPIC
 

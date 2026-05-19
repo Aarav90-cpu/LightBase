@@ -3,124 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LightBase Desktop Client</title>
+    <title>LightBase Bare-Metal Control Engine</title>
     <style>
+        :root {
+            --bg-color: #0d1117;
+            --panel-bg: #161b22;
+            --accent-green: #238636;
+            --text-main: #c9d1d9;
+            --telemetry-cyan: #58a6ff;
+            --sidebar-width: 260px;
+        }
         body {
-            background-color: #121212;
-            color: #e0e0e0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 20px;
-        }
-        h1 { color: #61afef; }
-        .console {
-            background-color: #1e1e1e;
-            border: 1px solid #3e3e3e;
-            padding: 15px;
-            border-radius: 5px;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             font-family: 'Courier New', Courier, monospace;
-            white-space: pre-wrap;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
         }
-        button {
-            background-color: #98c379;
-            border: none;
-            color: #121212;
-            padding: 10px 20px;
-            font-weight: bold;
-            border-radius: 4px;
-            cursor: pointer;
+
+        /* STUDIO SIDEBAR LAYOUT */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: #21262d;
+            border-right: 1px solid #30363d;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-sizing: border-box;
         }
-        button:hover { background-color: #7cb35b; }
+        .sidebar h2 { font-size: 16px; color: var(--telemetry-cyan); margin-top: 0; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+        .tree-section { margin-bottom: 20px; }
+        .tree-title { font-weight: bold; font-size: 14px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; }
+        .tree-item { padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; }
+        .tree-item:hover { background-color: #30363d; color: white; }
+        .tree-item::before { content: "📄 "; margin-right: 6px; }
+
+        /* MAIN COCKPIT WORKSPACE */
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+        h1 { color: var(--telemetry-cyan); border-bottom: 2px solid var(--panel-bg); padding-bottom: 10px; margin-top: 0; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
+        .panel { background-color: var(--panel-bg); border: 1px solid #30363d; border-radius: 6px; padding: 20px; }
+        .btn { background-color: var(--accent-green); color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; }
+        .btn:hover { filter: brightness(1.2); }
+        pre { background: #010409; padding: 12px; border-radius: 4px; overflow-x: auto; border: 1px solid #21262d; max-height: 200px; }
+        .metric { font-size: 24px; color: #79c0ff; font-weight: bold; margin: 10px 0; }
     </style>
 </head>
 <body>
 
-<h1>LightBase Client</h1>
-<p>Status: <span id="status" style="color: #e5c07b;">Connecting...</span></p>
+<div class="sidebar">
+    <h2>🗄️ Database Explorer</h2>
+    <button class="btn" style="margin-bottom: 15px; font-size: 12px; padding: 6px 10px;" onclick="refreshDatabaseSchema()">Scan Catalog</button>
 
-<button onclick="sendTestQuery()">Trigger C-Core Query</button>
+    <div class="tree-section" style="margin-top: 10px; border-top: 1px solid #30363d; padding-top: 15px;">
+        <div class="tree-title">Active Target Env</div>
+        <select id="env-selector" onchange="switchStudioEnvironment()" style="background: #0d1117; color: #58a6ff; border: 1px solid #30363d; padding: 6px; width: 100%; border-radius: 4px; font-family: inherit; font-weight: bold;">
+            <option value="Development">Development (dev.db)</option>
+            <option value="Staging">Staging (staging.db)</option>
+            <option value="Production">Production (production.db)</option>
+        </select>
+        <p style="font-size: 11px; color: #8b949e; margin: 8px 0 0 2px;">Core Context: <span id="current-env-label" style="color: #56d364; font-weight: bold;">Dev Track</span></p>
+    </div>
 
-<h3>Response Stream:</h3>
-<div id="output" class="console">Click the button to test the stack...</div>
+    <div class="tree-section" style="margin-top: 15px;">
+        <div class="tree-title">Tables</div>
+        <div id="sidebar-tables"></div>
+    </div>
+</div>
 
-<hr style="border: 1px solid #3e3e3e; margin: 20px 0;">
-<h2>Real Network Request via C Sockets</h2>
-<button onclick="fireRealNetworkRequest()" style="background-color: #61afef;">Get Live Post Data</button>
+<div class="main-content">
+    <h1>⚡ LightBase Studio Cockpit</h1>
+    <p>Status: <span style="color: #56d364; font-weight: bold;">CONNECTED VIA ASYNC THREAD POOL</span></p>
 
-<hr style="border: 1px solid #3e3e3e; margin: 20px 0;">
-<h2>Local SQLite Engine</h2>
-<button onclick="runLocalDatabaseQuery()" style="background-color: #e5c07b; color: #121212;">Query Local Database</button>
+    <div class="grid">
+        <div class="panel">
+            <h3>📊 Host OS Metrics (/proc/stat)</h3>
+            <div>CPU Utilization:</div>
+            <div id="cpu-metric" class="metric">0.00 %</div>
+            <div>Available RAM Block:</div>
+            <div id="mem-metric" class="metric">0 MB / 0 MB</div>
+            <p>Disk Write Head Ring Log Slot: <span id="log-slot" style="color: #e3b341; font-weight: bold;">--</span></p>
+        </div>
+
+        <div class="panel">
+            <h3>🗄️ Custom Memory Arena SQLite Engine</h3>
+            <button class="btn" style="background-color: #8957e5;" onclick="triggerDatabaseQuery()">Execute Script Batch</button>
+            <p>C-Core Latency: <span id="db-latency" style="color: #ff7b72;">0.00 us</span></p>
+            <pre id="db-output">// Executed statement results...</pre>
+        </div>
+
+        <div class="panel">
+            <h3>🌐 Cryptographic TLS HTTPS Client</h3>
+            <button class="btn" style="background-color: #1f6feb;" onclick="triggerNetworkFetch()">Fire Secure Handshake</button>
+            <p>C-Core Latency: <span id="net-latency" style="color: #ff7b72;">0.00 us</span></p>
+            <pre id="net-output">// Upstream server JSON responses...</pre>
+        </div>
+    </div>
+</div>
 
 <script>
-    async function sendTestQuery() {
-        const outputDiv = document.getElementById('output');
-        outputDiv.innerText = "Sending query to C-Core...";
+    const API_BASE = "http://localhost:8000";
 
+    // --- FETCH SIDEBAR CATALOG METADATA (MODULE 3) ---
+    async function refreshDatabaseSchema() {
         try {
-            // We'll point this to our local Python bridge server
-            const response = await fetch('http://localhost:8000/query', {
+            // Pass target data via standard body structures matching Python schema endpoint tags
+            const payload = { db_path: "test_lightbase.db" };
+            const res = await fetch(`${API_BASE}/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ query: "SELECT * FROM users LIMIT 3;" })
+                body: JSON.stringify({ target: "schema_scan", db_path: "test_lightbase.db" })
             });
 
-            const data = await response.json();
-            outputDiv.innerText = JSON.stringify(data, null, 2);
-            document.getElementById('status').innerText = "Connected & Active";
-            document.getElementById('status').style.color = "#98c379";
+            // Note: Ensure python_bridge.py routes custom "schema_scan" payloads accordingly
+            // We'll update the bridge to fully map this if needed, but let's test visibility first!
+            const data = await res.json();
+
+            const tablesContainer = document.getElementById('sidebar-tables');
+            const viewsContainer = document.getElementById('sidebar-views');
+
+            tablesContainer.innerHTML = '';
+            viewsContainer.innerHTML = '';
+
+            if (data.db_data && data.db_data.tables) {
+                data.db_data.tables.forEach(table => {
+                    const item = document.createElement('div');
+                    item.className = 'tree-item';
+                    item.innerText = table;
+                    item.onclick = () => { alert(`Selected Table: ${table}`); };
+                    tablesContainer.appendChild(item);
+                });
+            } else {
+                tablesContainer.innerHTML = '<div style="font-size:12px; color:#8b949e; padding-left:10px;">No tables detected</div>';
+            }
+
+            if (data.db_data && data.db_data.views) {
+                data.db_data.views.forEach(view => {
+                    const item = document.createElement('div');
+                    item.className = 'tree-item';
+                    item.innerText = view;
+                    viewsContainer.appendChild(item);
+                });
+            } else {
+                viewsContainer.innerHTML = '<div style="font-size:12px; color:#8b949e; padding-left:10px;">No views detected</div>';
+            }
         } catch (err) {
-            outputDiv.innerText = "Error connecting to LightBase Core: " + err.message;
-            document.getElementById('status').innerText = "Core Offline";
-            document.getElementById('status').style.color = "#e06c75";
+            console.error("Failed to map database schema metadata catalog tree:", err);
         }
     }
 
-    async function fireRealNetworkRequest() {
-        const outputDiv = document.getElementById('output');
-        outputDiv.innerText = "C-Core is parsing sockets and shaking hands...";
-
+    async function pollSystemMetrics() {
         try {
-            const response = await fetch('http://localhost:8000/request', {
+            const res = await fetch(`${API_BASE}/sys_metrics`, { method: 'POST' });
+            const data = await res.json();
+            const metrics = data.system_telemetry;
+
+            document.getElementById('cpu-metric').innerText = `${metrics.cpu_usage.toFixed(2)} %`;
+
+            const totalMemMB = Math.round(metrics.mem_total_kb / 1024);
+            const availMemMB = Math.round(metrics.mem_avail_kb / 1024);
+            document.getElementById('mem-metric').innerText = `${availMemMB} MB / ${totalMemMB} MB`;
+            document.getElementById('log-slot').innerText = metrics.last_logged_slot !== undefined ? metrics.last_logged_slot : "--";
+        } catch (err) {
+            console.error("Failed to poll host kernel matrices:", err);
+        }
+    }
+
+    async function triggerDatabaseQuery() {
+        try {
+            const payload = {
+                db_path: "test_lightbase.db",
+                query: "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT); INSERT INTO users (name) VALUES ('bbox_developer'); SELECT * FROM users LIMIT 3;"
+            };
+            const res = await fetch(`${API_BASE}/query`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            document.getElementById('db-latency').innerText = `${data.telemetry.c_core_duration_us.toFixed(2)} us`;
+            document.getElementById('db-output').innerText = JSON.stringify(data.db_data, null, 2);
+
+            // Auto-refresh the sidebar whenever tables change!
+            refreshDatabaseSchema();
+        } catch (err) {
+            document.getElementById('db-output').innerText = `Execution Error: ${err}`;
+        }
+    }
+
+    async function triggerNetworkFetch() {
+        try {
+            const payload = { hostname: "jsonplaceholder.typicode.com", path: "/posts/1" };
+            const res = await fetch(`${API_BASE}/request`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+
+            document.getElementById('net-latency').innerText = `${data.telemetry.c_core_duration_us.toFixed(2)} us`;
+            document.getElementById('net-output').innerText = JSON.stringify(data.network_data, null, 2);
+        } catch (err) {
+            document.getElementById('net-output').innerText = `Handshake Error: ${err}`;
+        }
+    }
+
+    // --- MUTATE ENVIRONMENT TARGET PATHS (MODULE 1) ---
+    async function switchStudioEnvironment() {
+        try {
+            const selectedEnv = document.getElementById('env-selector').value;
+            let targetDb = "dev_lightbase.db";
+
+            if (selectedEnv === "Staging") targetDb = "staging_lightbase.db";
+            if (selectedEnv === "Production") targetDb = "prod_lightbase.sovereign.db";
+
+            const res = await fetch(`${API_BASE}/query`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    hostname: "jsonplaceholder.typicode.com",
-                    path: "/posts/1"
+                    target: "set_env",
+                    env_name: selectedEnv,
+                    db_path: targetDb
                 })
             });
+            const data = await res.json();
 
-            const data = await response.json();
-            outputDiv.innerText = JSON.stringify(data, null, 2);
+            // Update interface states dynamically based on the atomic core pointer swap
+            document.getElementById('current-env-label').innerText = `${selectedEnv} Track`;
+            console.log("[Studio Environment] Core mutated to:", data.db_data);
+
+            // Instantly force-refresh the database structure sidebar catalog tree to view new tables!
+            refreshDatabaseSchema();
         } catch (err) {
-            outputDiv.innerText = "Network engine error: " + err.message;
+            console.error("Failed to mutate bare-metal studio context layout:", err);
         }
     }
 
-    async function runLocalDatabaseQuery() {
-        const outputDiv = document.getElementById('output');
-        outputDiv.innerText = "C-Core dynamically parsing engine execution handles...";
-
-        try {
-            const complexQuery = `
-                CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT);
-                INSERT INTO users (name) VALUES ('bbox_developer');
-                SELECT * FROM users;
-            `;
-
-            const response = await fetch('http://localhost:8000/local_db', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    db_path: "test_lightbase.db",
-                    query: complexQuery
-                })
-            });
-
-            const data = await response.json();
-            outputDiv.innerText = JSON.stringify(data, null, 2);
-        } catch (err) {
-            outputDiv.innerText = "Database engine error: " + err.message;
-        }
-    }
+    // Auto-initialize loops
+    setInterval(pollSystemMetrics, 2000);
+    pollSystemMetrics();
+    setTimeout(refreshDatabaseSchema, 1000); // Wait for boot and scan catalog
 </script>
 </body>
 </html>

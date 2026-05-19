@@ -2,6 +2,10 @@ libcore.so: \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o \
   CMakeFiles/core.dir/src/engine.c.o \
+  CMakeFiles/core.dir/src/arena.c.o \
+  CMakeFiles/core.dir/src/sys_monitor.c.o \
+  CMakeFiles/core.dir/src/tlv.c.o \
+  CMakeFiles/core.dir/src/storage.c.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libdl.a \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libgcc_s_asneeded.so \
@@ -39,6 +43,14 @@ libcore.so: \
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o:
 
 CMakeFiles/core.dir/src/engine.c.o:
+
+CMakeFiles/core.dir/src/arena.c.o:
+
+CMakeFiles/core.dir/src/sys_monitor.c.o:
+
+CMakeFiles/core.dir/src/tlv.c.o:
+
+CMakeFiles/core.dir/src/storage.c.o:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libdl.a:
 

@@ -3,20 +3,19 @@ project(LightBaseCore C)
 
 set(CMAKE_C_STANDARD 99)
 
-# 1. Force Extreme Release Optimizations and Strip Debug Symbols
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -flto -s")
+# ─── FIX: Add -z noexecstack to link parameters defensively ───
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -flto -s -z noexecstack")
 
-# 2. Define the Shared Library Target Framework
-add_library(core SHARED src/engine.c)
+# Define the Shared Library Target Framework
+add_library(core SHARED src/engine.c src/arena.c src/sys_monitor.c src/tlv.c src/storage.c)
 
-# 3. Bind the Local Include Headers Directory
+# Bind the Local Include Headers Directory
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# 4. Link the System's Native Dynamic Linking Binary Library (dl)
+# Link the System's Native Dynamic Linking Binary Library (dl)
 target_link_libraries(core dl)
 
-# 5. PRODUCTION BUNDLING LAYOUT DESIGN
-# Define our target installation directories on the host filesystem
+# PRODUCTION BUNDLING LAYOUT DESIGN
 set(DIST_DIR "/home/aarav/LightBase/dist")
 
 install(TARGETS core

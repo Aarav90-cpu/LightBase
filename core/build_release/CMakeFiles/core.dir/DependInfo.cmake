@@ -8,7 +8,11 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
+  "/home/aarav/LightBase/core/src/arena.c" "CMakeFiles/core.dir/src/arena.c.o" "gcc" "CMakeFiles/core.dir/src/arena.c.o.d"
   "/home/aarav/LightBase/core/src/engine.c" "CMakeFiles/core.dir/src/engine.c.o" "gcc" "CMakeFiles/core.dir/src/engine.c.o.d"
+  "/home/aarav/LightBase/core/src/storage.c" "CMakeFiles/core.dir/src/storage.c.o" "gcc" "CMakeFiles/core.dir/src/storage.c.o.d"
+  "/home/aarav/LightBase/core/src/sys_monitor.c" "CMakeFiles/core.dir/src/sys_monitor.c.o" "gcc" "CMakeFiles/core.dir/src/sys_monitor.c.o.d"
+  "/home/aarav/LightBase/core/src/tlv.c" "CMakeFiles/core.dir/src/tlv.c.o" "gcc" "CMakeFiles/core.dir/src/tlv.c.o.d"
   "" "libcore.so" "gcc" "CMakeFiles/core.dir/link.d"
   )
 

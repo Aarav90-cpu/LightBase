@@ -1,10 +1,9 @@
-import ctypes
-import os
-import sys
 import json
+import socket
+import ctypes
 from http.server import HTTPServer, BaseHTTPRequestHandler
-from socketserver import ThreadingMixIn
 
+# 1. DEFINE COMPACT PYTHON INTERFACE TYPES MATCHING C STRUCTS
 class CResponse(ctypes.Structure):
     _fields_ = [
         ("status_code", ctypes.c_int),
@@ -12,198 +11,157 @@ class CResponse(ctypes.Structure):
     ]
 
 def load_lightbase_core():
-    # Update target route to link directly against our optimized distribution asset directory
     lib_path = "/home/aarav/LightBase/dist/lib/libcore.so"
-
     core = ctypes.CDLL(lib_path)
-    core.execute_raw_query.argtypes = [ctypes.c_char_p]
-    core.execute_raw_query.restype = CResponse
-    core.fire_http_get.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-    core.fire_http_get.restype = CResponse
-    core.execute_local_db.argtypes = [ctypes.c_char_p, ctypes.c_char_p]
-    core.execute_local_db.restype = CResponse
 
+    # Track persistent background thread IPC loop controller configuration
     core.start_linux_ipc_bridge.argtypes = []
     core.start_linux_ipc_bridge.restype = ctypes.c_int
     return core
 
-lightbase = load_lightbase_core()
-
-class LightBaseAPIHandler(BaseHTTPRequestHandler):
-
-    def _send_cors_and_headers(self, status_code=200):
-        """Sends the HTTP response code and all mandatory headers cleanly."""
-        self.send_response(status_code)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.end_headers()
+# 2. THE API GATEWAY ROUTER (STRICT INDENTATION COMPLIANCE)
+class LightBaseGatewayHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
-        """Handles browser CORS preflight checks smoothly."""
-        self._send_cors_and_headers(200)
+        # Handle CORS safety checks seamlessly for browser clients
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.end_headers()
 
+    # Helper routine to serialize fields into formal Type-Length-Value byte strings
+    def encode_tlv_field(self, tag, value_str):
+        value_bytes = value_str.encode('utf-8')
+        length = len(value_bytes)
+        # Format layout: Tag (1B), Length (2B Big-Endian), Value (NB)
+        header = bytes([tag, (length >> 8) & 0xFF, length & 0xFF])
+        return header + value_bytes
+
+    # --- ROUTE A: SECURE HTTPS NETWORK ENGINE OVER IPC ---
     def do_POST(self):
-        """Processes downstream operations for the LightBase stack."""
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length)
+        if self.path == '/request':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            req_json = json.loads(post_data)
 
-        try:
-            request_json = json.loads(post_data.decode('utf-8'))
-        except Exception:
-            self._send_cors_and_headers(400)
-            self.wfile.write(json.dumps({"error": "Invalid JSON payload"}).encode('utf-8'))
-            return
+            hostname = req_json.get("hostname", "jsonplaceholder.typicode.com")
+            path = req_json.get("path", "/posts/1")
 
-        # ROUTE 1: Local Mock Query
-        if self.path == "/query":
-            raw_query = request_json.get("query", "")
-            c_response = lightbase.execute_raw_query(raw_query.encode('utf-8'))
-            self._send_cors_and_headers(200)
-            response_payload = {
-                "engine_status": c_response.status_code,
-                "data": json.loads(c_response.payload.decode('utf-8'))
+            # Serialize fields into a single sequential binary frame stream block
+            tlv_frame = (
+                    self.encode_tlv_field(0x01, "network") +
+                    self.encode_tlv_field(0x04, hostname) +
+                    self.encode_tlv_field(0x05, path)
+            )
+
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.connect("/tmp/lightbase.sock")
+            client.sendall(tlv_frame) # Throw raw unparsed bits over the socket runway track!
+
+            raw_response = client.recv(6144).decode('utf-8')
+            client.close()
+
+            response_json = json.loads(raw_response)
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+
+            output = {
+                "engine_status": 200,
+                "network_data": response_json.get("network_payload", {}),
+                "telemetry": { "c_core_duration_us": response_json.get("c_core_duration_us", 0) }
             }
-            self.wfile.write(json.dumps(response_payload).encode('utf-8'))
+            self.wfile.write(json.dumps(output).encode('utf-8'))
 
-        # ROUTE 2: Outbound Network Request Engine via Native Unix Domain Sockets!
-        elif self.path == "/request":
-            import socket as py_socket
-            import time
-            py_start = time.perf_counter()
+        # --- ROUTE B: ARENA-POWERED DATABASE ROUTE OVER IPC ---
+        elif self.path == '/local_db' or self.path == '/query':
+            content_length = int(self.headers['Content-Length'])
+            post_data = self.rfile.read(content_length).decode('utf-8')
+            req_json = json.loads(post_data)
 
-            hostname = request_json.get("hostname", "")
-            path = request_json.get("path", "")
+            # Detect whether frontend is calling a normal raw SQL string or an explicit metadata sidebar scan
+            ui_target = req_json.get("target", "local_db")
+            db_path = req_json.get("db_path", "test_lightbase.db")
 
-            # Pack the network request parameters into our IPC target packet layout
-            ipc_payload = json.dumps({
-                "target": "network",
-                "hostname": hostname,
-                "path": path
-            })
+            if ui_target == "schema_scan":
+                tlv_frame = (
+                        self.encode_tlv_field(0x01, "schema_scan") +
+                        self.encode_tlv_field(0x02, db_path)
+                )
+            elif ui_target == "set_env":
+                # Match binary layout markers: Tag 0x01 = set_env, Tag 0x02 = Target Active DB Path
+                env_name = req_json.get("env_name", "Development")
+                tlv_frame = (
+                        self.encode_tlv_field(0x01, "set_env") +
+                        self.encode_tlv_field(0x02, db_path)
+                )
+            else:
+                raw_query = req_json.get("query", "SELECT * FROM users;")
+                tlv_frame = (
+                        self.encode_tlv_field(0x01, "local_db") +
+                        self.encode_tlv_field(0x02, db_path) +
+                        self.encode_tlv_field(0x03, raw_query)
+                )
 
-            try:
-                client = py_socket.socket(py_socket.AF_UNIX, py_socket.SOCK_STREAM)
-                client.connect("/tmp/lightbase.sock")
-                client.sendall(ipc_payload.encode('utf-8'))
+            # (Socket transmission code blocks remain completely un-compromised)
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.connect("/tmp/lightbase.sock")
+            client.sendall(tlv_frame)
 
-                chunks = []
-                while True:
-                    chunk = client.recv(4096)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
+            raw_response = client.recv(16384).decode('utf-8')
+            client.close()
 
-                c_ipc_response = b"".join(chunks).decode('utf-8')
-                client.close()
+            response_json = json.loads(raw_response)
 
-                c_unpacked_payload = json.loads(c_ipc_response)
-                engine_status = 200
-            except Exception as e:
-                c_unpacked_payload = {"error": f"Network IPC channel transport tracking fault: {e}"}
-                engine_status = 500
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
 
-            py_duration_ms = (time.perf_counter() - py_start) * 1000
-            self._send_cors_and_headers(engine_status)
-
-            response_payload = {
-                "engine_status": engine_status,
-                "network_data": c_unpacked_payload.get("network_payload", c_unpacked_payload),
-                "telemetry": {
-                    "c_core_duration_us": c_unpacked_payload.get("c_core_duration_us", 0.0),
-                    "total_ipc_roundtrip_latency_ms": round(py_duration_ms, 3)
-                }
+            output = {
+                "engine_status": 200,
+                "db_data": response_json, # Passes parsed tables/views object arrays straight to UI grid trees
+                "telemetry": { "c_core_duration_us": response_json.get("c_core_duration_us", 0) }
             }
-            self.wfile.write(json.dumps(response_payload).encode('utf-8'))
+            self.wfile.write(json.dumps(output).encode('utf-8'))
 
-        elif self.path == "/local_db":
-            import socket as py_socket
-            import time
-            py_start = time.perf_counter()
+        # --- ROUTE C: REAL-TIME LINUX KERNEL TELEMETRY METRICS ROUTE ---
+        elif self.path == '/sys_metrics':
+            tlv_frame = self.encode_tlv_field(0x01, "sys_metrics")
 
-            db_path = request_json.get("db_path", "")
-            sql_query = request_json.get("query", "")
+            client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            client.connect("/tmp/lightbase.sock")
+            client.sendall(tlv_frame)
 
-            # Construct a unified payload string tracking our target signature match
-            ipc_payload = json.dumps({
-                "target": "local_db",
-                "db_path": db_path,
-                "query": sql_query
-            })
+            raw_response = client.recv(6144).decode('utf-8')
+            client.close()
 
-            try:
-                # Open a direct, high-speed connection stream to the running C background thread
-                client = py_socket.socket(py_socket.AF_UNIX, py_socket.SOCK_STREAM)
-                client.connect("/tmp/lightbase.sock")
+            response_json = json.loads(raw_response)
 
-                # Blast the raw characters down the kernel node channel
-                client.sendall(ipc_payload.encode('utf-8'))
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
 
-                # Collect the returned string modifications from the C heap allocations
-                chunks = []
-                while True:
-                    chunk = client.recv(4096)
-                    if not chunk:
-                        break
-                    chunks.append(chunk)
+            output = { "engine_status": 200, "system_telemetry": response_json }
+            self.wfile.write(json.dumps(output).encode('utf-8'))
 
-                c_ipc_response = b"".join(chunks).decode('utf-8')
-                client.close()
 
-                c_unpacked_payload = json.loads(c_ipc_response)
-                engine_status = 200
-            except Exception as e:
-                c_unpacked_payload = {"error": f"IPC transport channel tracking fault: {e}"}
-                engine_status = 500
 
-            py_duration_ms = (time.perf_counter() - py_start) * 1000
-            self._send_cors_and_headers(engine_status)
 
-            response_payload = {
-                "engine_status": engine_status,
-                "db_data": c_unpacked_payload.get("rows", c_unpacked_payload),
-                "telemetry": {
-                    "c_core_duration_us": c_unpacked_payload.get("c_core_duration_us", 0.0),
-                    "total_ipc_roundtrip_latency_ms": round(py_duration_ms, 3)
-                }
-            }
-            self.wfile.write(json.dumps(response_payload).encode('utf-8'))
+# 3. SERVICE RUNTIME DEPLOYMENT CHECKPOINT
+if __name__ == '__main__':
+    print("[Python Gateway] Booting LightBase ecosystem runtime core setup...")
+    lightbase = load_lightbase_core()
 
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    pass
+    # Spawns our multi-threaded POSIX background worker routing daemon in C
+    status = lightbase.start_linux_ipc_bridge()
+    print(f"[Python Gateway] C-Core background thread initialized. Code: {status}")
 
-if __name__ == "__main__":
-    import socket as py_socket
-    import time
-
-    # 1. Fire up the C background worker thread infrastructure
-    ipc_status = lightbase.start_linux_ipc_bridge()
-    print(f"[Python Gateway] C-Core background thread initialized. Code: {ipc_status}")
-
-    # Give the C thread a quick 50ms window to bind the filesystem node safely
-    time.sleep(0.05)
-
-    # 2. Open an independent client socket file stream targeting the dynamic file
-    try:
-        client = py_socket.socket(py_socket.AF_UNIX, py_socket.SOCK_STREAM)
-        client.connect("/tmp/lightbase.sock")
-
-        test_payload = "{\"command\": \"ping\", \"origin\": \"python_runtime\"}"
-        client.sendall(test_payload.encode('utf-8'))
-
-        raw_response = client.recv(1024)
-        print(f"[Python Gateway UDS Mirror Response]: {raw_response.decode('utf-8')}")
-        client.close()
-    except Exception as e:
-        print(f"[Python Gateway UDS Error Log]: Failed to map connection layout link. Details: {e}")
-
-    # 3. Boot up the standard external web interface loop cleanly
-    server_address = ('localhost', 8000)
-    httpd = ThreadedHTTPServer(server_address, LightBaseAPIHandler)
+    server_address = ('', 8000)
+    httpd = HTTPServer(server_address, LightBaseGatewayHandler)
     print("[Python Server] LightBase API serving at http://localhost:8000 🚀")
-    try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:
-        print("\n[Python Server] Shutting down cleanly.")
-        httpd.server_close()
+    httpd.serve_forever()
