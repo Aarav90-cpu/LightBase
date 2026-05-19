@@ -6,7 +6,26 @@ libcore.so: \
   CMakeFiles/core.dir/src/sys_monitor.c.o \
   CMakeFiles/core.dir/src/tlv.c.o \
   CMakeFiles/core.dir/src/storage.c.o \
+  CMakeFiles/core.dir/src/collections.c.o \
+  CMakeFiles/core.dir/src/assert_engine.c.o \
+  CMakeFiles/core.dir/src/database.c.o \
+  CMakeFiles/core.dir/src/thread_pool.c.o \
+  CMakeFiles/core.dir/src/schema_docs.c.o \
+  CMakeFiles/core.dir/src/git_sync.c.o \
+  CMakeFiles/core.dir/src/ai_core.c.o \
+  CMakeFiles/core.dir/src/crypto_vault.c.o \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libssl.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libcrypto.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libsqlite3.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libdl.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so \
+  /usr/lib/libm.so.6 \
+  /usr/lib/libmvec.so.1 \
+  /usr/lib/quickjs/libquickjs.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libpthread.a \
+  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libgit2.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libgcc_s_asneeded.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libgcc_s_asneeded.so \
@@ -52,7 +71,45 @@ CMakeFiles/core.dir/src/tlv.c.o:
 
 CMakeFiles/core.dir/src/storage.c.o:
 
+CMakeFiles/core.dir/src/collections.c.o:
+
+CMakeFiles/core.dir/src/assert_engine.c.o:
+
+CMakeFiles/core.dir/src/database.c.o:
+
+CMakeFiles/core.dir/src/thread_pool.c.o:
+
+CMakeFiles/core.dir/src/schema_docs.c.o:
+
+CMakeFiles/core.dir/src/git_sync.c.o:
+
+CMakeFiles/core.dir/src/ai_core.c.o:
+
+CMakeFiles/core.dir/src/crypto_vault.c.o:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libssl.so:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libcrypto.so:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libsqlite3.so:
+
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libdl.a:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libm.so:
+
+/usr/lib/libm.so.6:
+
+/usr/lib/libmvec.so.1:
+
+/usr/lib/quickjs/libquickjs.a:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libpthread.a:
+
+/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libgit2.so:
 
 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/libgcc.a:
 

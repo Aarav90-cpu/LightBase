@@ -1,6 +1,5 @@
 #include "tlv.h"
 #include <string.h>
-#define TLV_TAG_SCHEMA_SCAN 0x06
 
 int parse_binary_tlv_frame(const uint8_t* stream, size_t stream_len, TLVCommandPacket* out_packet) {
     if (!stream || stream_len == 0 || !out_packet) return -1;
@@ -63,6 +62,18 @@ int parse_binary_tlv_frame(const uint8_t* stream, size_t stream_len, TLVCommandP
                 if (length < sizeof(out_packet->method)) {
                     memcpy(out_packet->method, &stream[offset], length);
                     out_packet->method[length] = '\0';
+                }
+                break;
+            case TLV_TAG_BODY:
+                if (length < sizeof(out_packet->body)) {
+                    memcpy(out_packet->body, &stream[offset], length);
+                    out_packet->body[length] = '\0';
+                }
+                break;
+            case TLV_TAG_FORM:
+                if (length < sizeof(out_packet->form_data)) {
+                    memcpy(out_packet->form_data, &stream[offset], length);
+                    out_packet->form_data[length] = '\0';
                 }
                 break;
             default:

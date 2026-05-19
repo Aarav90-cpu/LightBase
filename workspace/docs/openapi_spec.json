@@ -1,0 +1,25 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "LightBase API",
+    "version": "1.0.0",
+    "description": "Auto-generated from LightBase Studio collections"
+  },
+  "paths": {
+    "/get": {
+      "get": {
+        "summary": "flow_test_col",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000"
+    }
+  ]
+}

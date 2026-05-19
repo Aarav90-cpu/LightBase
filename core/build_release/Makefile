@@ -174,6 +174,46 @@ core/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/build
 .PHONY : core/fast
 
+#=============================================================================
+# Target rules for targets named lb-cli
+
+# Build rule for target.
+lb-cli: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 lb-cli
+.PHONY : lb-cli
+
+# fast build rule for target.
+lb-cli/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/build
+.PHONY : lb-cli/fast
+
+src/ai_core.o: src/ai_core.c.o
+.PHONY : src/ai_core.o
+
+# target to build an object file
+src/ai_core.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/ai_core.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/ai_core.c.o
+.PHONY : src/ai_core.c.o
+
+src/ai_core.i: src/ai_core.c.i
+.PHONY : src/ai_core.i
+
+# target to preprocess a source file
+src/ai_core.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/ai_core.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/ai_core.c.i
+.PHONY : src/ai_core.c.i
+
+src/ai_core.s: src/ai_core.c.s
+.PHONY : src/ai_core.s
+
+# target to generate assembly for a file
+src/ai_core.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/ai_core.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/ai_core.c.s
+.PHONY : src/ai_core.c.s
+
 src/arena.o: src/arena.c.o
 .PHONY : src/arena.o
 
@@ -198,6 +238,105 @@ src/arena.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/arena.c.s
 .PHONY : src/arena.c.s
 
+src/assert_engine.o: src/assert_engine.c.o
+.PHONY : src/assert_engine.o
+
+# target to build an object file
+src/assert_engine.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/assert_engine.c.o
+.PHONY : src/assert_engine.c.o
+
+src/assert_engine.i: src/assert_engine.c.i
+.PHONY : src/assert_engine.i
+
+# target to preprocess a source file
+src/assert_engine.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/assert_engine.c.i
+.PHONY : src/assert_engine.c.i
+
+src/assert_engine.s: src/assert_engine.c.s
+.PHONY : src/assert_engine.s
+
+# target to generate assembly for a file
+src/assert_engine.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/assert_engine.c.s
+.PHONY : src/assert_engine.c.s
+
+src/collections.o: src/collections.c.o
+.PHONY : src/collections.o
+
+# target to build an object file
+src/collections.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/collections.c.o
+.PHONY : src/collections.c.o
+
+src/collections.i: src/collections.c.i
+.PHONY : src/collections.i
+
+# target to preprocess a source file
+src/collections.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/collections.c.i
+.PHONY : src/collections.c.i
+
+src/collections.s: src/collections.c.s
+.PHONY : src/collections.s
+
+# target to generate assembly for a file
+src/collections.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/collections.c.s
+.PHONY : src/collections.c.s
+
+src/crypto_vault.o: src/crypto_vault.c.o
+.PHONY : src/crypto_vault.o
+
+# target to build an object file
+src/crypto_vault.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/crypto_vault.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/crypto_vault.c.o
+.PHONY : src/crypto_vault.c.o
+
+src/crypto_vault.i: src/crypto_vault.c.i
+.PHONY : src/crypto_vault.i
+
+# target to preprocess a source file
+src/crypto_vault.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/crypto_vault.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/crypto_vault.c.i
+.PHONY : src/crypto_vault.c.i
+
+src/crypto_vault.s: src/crypto_vault.c.s
+.PHONY : src/crypto_vault.s
+
+# target to generate assembly for a file
+src/crypto_vault.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/crypto_vault.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/crypto_vault.c.s
+.PHONY : src/crypto_vault.c.s
+
+src/database.o: src/database.c.o
+.PHONY : src/database.o
+
+# target to build an object file
+src/database.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/database.c.o
+.PHONY : src/database.c.o
+
+src/database.i: src/database.c.i
+.PHONY : src/database.i
+
+# target to preprocess a source file
+src/database.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/database.c.i
+.PHONY : src/database.c.i
+
+src/database.s: src/database.c.s
+.PHONY : src/database.s
+
+# target to generate assembly for a file
+src/database.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/database.c.s
+.PHONY : src/database.c.s
+
 src/engine.o: src/engine.c.o
 .PHONY : src/engine.o
 
@@ -221,6 +360,81 @@ src/engine.s: src/engine.c.s
 src/engine.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/engine.c.s
 .PHONY : src/engine.c.s
+
+src/git_sync.o: src/git_sync.c.o
+.PHONY : src/git_sync.o
+
+# target to build an object file
+src/git_sync.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_sync.c.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/git_sync.c.o
+.PHONY : src/git_sync.c.o
+
+src/git_sync.i: src/git_sync.c.i
+.PHONY : src/git_sync.i
+
+# target to preprocess a source file
+src/git_sync.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_sync.c.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/git_sync.c.i
+.PHONY : src/git_sync.c.i
+
+src/git_sync.s: src/git_sync.c.s
+.PHONY : src/git_sync.s
+
+# target to generate assembly for a file
+src/git_sync.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_sync.c.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/git_sync.c.s
+.PHONY : src/git_sync.c.s
+
+src/lb_cli.o: src/lb_cli.c.o
+.PHONY : src/lb_cli.o
+
+# target to build an object file
+src/lb_cli.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/lb_cli.c.o
+.PHONY : src/lb_cli.c.o
+
+src/lb_cli.i: src/lb_cli.c.i
+.PHONY : src/lb_cli.i
+
+# target to preprocess a source file
+src/lb_cli.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/lb_cli.c.i
+.PHONY : src/lb_cli.c.i
+
+src/lb_cli.s: src/lb_cli.c.s
+.PHONY : src/lb_cli.s
+
+# target to generate assembly for a file
+src/lb_cli.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/lb_cli.c.s
+.PHONY : src/lb_cli.c.s
+
+src/schema_docs.o: src/schema_docs.c.o
+.PHONY : src/schema_docs.o
+
+# target to build an object file
+src/schema_docs.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/schema_docs.c.o
+.PHONY : src/schema_docs.c.o
+
+src/schema_docs.i: src/schema_docs.c.i
+.PHONY : src/schema_docs.i
+
+# target to preprocess a source file
+src/schema_docs.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/schema_docs.c.i
+.PHONY : src/schema_docs.c.i
+
+src/schema_docs.s: src/schema_docs.c.s
+.PHONY : src/schema_docs.s
+
+# target to generate assembly for a file
+src/schema_docs.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/schema_docs.c.s
+.PHONY : src/schema_docs.c.s
 
 src/storage.o: src/storage.c.o
 .PHONY : src/storage.o
@@ -270,6 +484,30 @@ src/sys_monitor.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/sys_monitor.c.s
 .PHONY : src/sys_monitor.c.s
 
+src/thread_pool.o: src/thread_pool.c.o
+.PHONY : src/thread_pool.o
+
+# target to build an object file
+src/thread_pool.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/thread_pool.c.o
+.PHONY : src/thread_pool.c.o
+
+src/thread_pool.i: src/thread_pool.c.i
+.PHONY : src/thread_pool.i
+
+# target to preprocess a source file
+src/thread_pool.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/thread_pool.c.i
+.PHONY : src/thread_pool.c.i
+
+src/thread_pool.s: src/thread_pool.c.s
+.PHONY : src/thread_pool.s
+
+# target to generate assembly for a file
+src/thread_pool.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/thread_pool.c.s
+.PHONY : src/thread_pool.c.s
+
 src/tlv.o: src/tlv.c.o
 .PHONY : src/tlv.o
 
@@ -307,18 +545,46 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... core"
+	@echo "... lb-cli"
+	@echo "... src/ai_core.o"
+	@echo "... src/ai_core.i"
+	@echo "... src/ai_core.s"
 	@echo "... src/arena.o"
 	@echo "... src/arena.i"
 	@echo "... src/arena.s"
+	@echo "... src/assert_engine.o"
+	@echo "... src/assert_engine.i"
+	@echo "... src/assert_engine.s"
+	@echo "... src/collections.o"
+	@echo "... src/collections.i"
+	@echo "... src/collections.s"
+	@echo "... src/crypto_vault.o"
+	@echo "... src/crypto_vault.i"
+	@echo "... src/crypto_vault.s"
+	@echo "... src/database.o"
+	@echo "... src/database.i"
+	@echo "... src/database.s"
 	@echo "... src/engine.o"
 	@echo "... src/engine.i"
 	@echo "... src/engine.s"
+	@echo "... src/git_sync.o"
+	@echo "... src/git_sync.i"
+	@echo "... src/git_sync.s"
+	@echo "... src/lb_cli.o"
+	@echo "... src/lb_cli.i"
+	@echo "... src/lb_cli.s"
+	@echo "... src/schema_docs.o"
+	@echo "... src/schema_docs.i"
+	@echo "... src/schema_docs.s"
 	@echo "... src/storage.o"
 	@echo "... src/storage.i"
 	@echo "... src/storage.s"
 	@echo "... src/sys_monitor.o"
 	@echo "... src/sys_monitor.i"
 	@echo "... src/sys_monitor.s"
+	@echo "... src/thread_pool.o"
+	@echo "... src/thread_pool.i"
+	@echo "... src/thread_pool.s"
 	@echo "... src/tlv.o"
 	@echo "... src/tlv.i"
 	@echo "... src/tlv.s"

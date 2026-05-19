@@ -3,757 +3,301 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LightBase Bare-Metal Control Engine</title>
-    <style>
-        :root {
-            --bg-color: #0d1117;
-            --panel-bg: #161b22;
-            --accent-green: #238636;
-            --text-main: #c9d1d9;
-            --telemetry-cyan: #58a6ff;
-            --sidebar-width: 260px;
-        }
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 0;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        /* STUDIO SIDEBAR LAYOUT */
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: #21262d;
-            border-right: 1px solid #30363d;
-            display: flex;
-            flex-direction: column;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        .sidebar h2 { font-size: 16px; color: var(--telemetry-cyan); margin-top: 0; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
-        .tree-section { margin-bottom: 20px; }
-        .tree-title { font-weight: bold; font-size: 14px; color: #8b949e; margin-bottom: 8px; text-transform: uppercase; }
-        .tree-item { padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; }
-        .tree-item:hover { background-color: #30363d; color: white; }
-        .tree-item::before { content: "📄 "; margin-right: 6px; }
-
-        /* MAIN COCKPIT WORKSPACE */
-        .main-content {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            box-sizing: border-box;
-        }
-        h1 { color: var(--telemetry-cyan); border-bottom: 2px solid var(--panel-bg); padding-bottom: 10px; margin-top: 0; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-top: 20px; }
-        .panel { background-color: var(--panel-bg); border: 1px solid #30363d; border-radius: 6px; padding: 20px; }
-        .btn { background-color: var(--accent-green); color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: inherit; }
-        .btn:hover { filter: brightness(1.2); }
-        pre { background: #010409; padding: 12px; border-radius: 4px; overflow-x: auto; border: 1px solid #21262d; max-height: 200px; }
-        .metric { font-size: 24px; color: #79c0ff; font-weight: bold; margin: 10px 0; }
-
-        /* High-Performance Sidebar Visualizer Tree Component Nodes */
-        .tree-node {
-            display: flex;
-            align-items: center;
-            padding: 6px 8px;
-            border-radius: 4px;
-            transition: background 0.2s ease, color 0.2s ease;
-            user-select: none;
-        }
-        .tree-node:hover {
-            background-color: #21262d;
-            color: #58a6ff !important;
-        }
-        .tree-children {
-            border-left: 1px dashed #30363d;
-            margin-left: 12px;
-            padding-left: 10px;
-            transition: all 0.3s ease-in-out;
-        }
-        .column-leaf {
-            display: flex;
-            align-items: center;
-            padding: 3px 6px;
-            font-size: 12px;
-            font-family: 'JetBrains Mono', monospace;
-        }
-        .method-btn {
-            border: 1px solid #30363d;
-            transition: all 0.2s ease;
-        }
-    </style>
+    <meta name="description" content="LightBase Studio — Local-first, multi-protocol API development platform powered by a native C-Core engine.">
+    <title>LightBase Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<div class="sidebar">
-    <h2>🗄️ Database Explorer</h2>
-    <button class="btn" style="margin-bottom: 15px; font-size: 12px; padding: 6px 10px;" onclick="refreshDatabaseSchema()">Scan Catalog</button>
-
-    <div class="tree-section" style="margin-top: 10px; border-top: 1px solid #30363d; padding-top: 15px;">
-        <div class="tree-title">Active Target Env</div>
-        <select id="env-selector" onchange="switchStudioEnvironment()" style="background: #0d1117; color: #58a6ff; border: 1px solid #30363d; padding: 6px; width: 100%; border-radius: 4px; font-family: inherit; font-weight: bold;">
-            <option value="Development">Development (dev.db)</option>
-            <option value="Staging">Staging (staging.db)</option>
-            <option value="Production">Production (production.db)</option>
-        </select>
-        <p style="font-size: 11px; color: #8b949e; margin: 8px 0 0 2px;">Core Context: <span id="current-env-label" style="color: #56d364; font-weight: bold;">Dev Track</span></p>
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><span class="logo-icon">⚡</span> LightBase</div>
+        <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
     </div>
-
-    <div class="tree-section" style="margin-top: 15px;">
-        <div class="tree-title">Tables</div>
-        <div id="sidebar-tables"></div>
-    </div>
-
-    <div class="sidebar-section" style="margin-top: 20px; border-top: 1px solid #30363d; padding-top: 15px;">
-        <h4 style="color: #8b949e; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            📁 SCHEMA VISUALIZER
-            <button onclick="refreshSchemaTree()" style="background: none; border: none; color: #58a6ff; cursor: pointer; font-size: 12px;">🔄 Refresh</button>
-        </h4>
-        <div id="schema-tree-container" style="font-family: monospace; font-size: 13px; color: #c9d1d9;">
-            <span style="color: #8b949e; font-style: italic;">No database catalog mapped...</span>
+    <div class="sidebar-scroll">
+        <!-- Environment -->
+        <div class="sb-section">
+            <div class="sb-title">Environment</div>
+            <select id="env-selector" class="sb-select" onchange="switchEnv()">
+                <option value="dev">🟢 Development</option>
+                <option value="staging">🟡 Staging</option>
+                <option value="prod">🔴 Production</option>
+            </select>
+            <div class="sb-hint">DB: <span id="env-db-label" class="text-green">test_lightbase.db</span></div>
+            <button class="btn btn-xs btn-outline w-full mt-4" onclick="openEnvEditor()">✏️ Edit Variables</button>
+        </div>
+        <!-- Schema -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Schema</span><button class="sb-action" onclick="refreshSchemaTree()">↻</button></div>
+            <div id="schema-tree" class="sb-tree-area"><span class="text-muted">Click ↻</span></div>
+        </div>
+        <!-- Collections -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Collections</span><button class="sb-action text-green" onclick="saveCollection()">＋</button></div>
+            <input id="col-name" type="text" class="sb-input" placeholder="Collection name…">
+            <div id="col-list" class="sb-tree-area"><span class="text-muted">None saved</span></div>
+        </div>
+        <!-- Cookie Jar -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Cookies</span><button class="sb-action text-red" onclick="clearCookies()">Clear</button></div>
+            <div id="cookie-list" class="sb-tree-area"><span class="text-muted">Empty</span></div>
+        </div>
+        <!-- Git -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Git Sync</span><button class="sb-action" onclick="pollGit()">↻</button></div>
+            <pre id="git-output" class="sb-pre">Idle</pre>
+        </div>
+        <!-- Vault -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Crypto Vault</span></div>
+            <select id="vault-provider" class="sb-select"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option></select>
+            <input id="vault-key" type="password" class="sb-input" placeholder="sk-…">
+            <button class="btn btn-xs btn-outline w-full mt-4" onclick="vaultEncrypt()">🔒 Store</button>
+            <div id="vault-status" class="sb-hint">Idle</div>
         </div>
     </div>
+</aside>
 
-    <div class="sidebar-section" style="margin-top: 20px; border-top: 1px solid #30363d; padding-top: 15px;">
-        <h4 style="color: #8b949e; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-            📁 SAVED COLLECTIONS
-            <button onclick="saveCurrentRequestToLedger()" style="background: none; border: none; color: #39d353; cursor: pointer; font-size: 12px; font-weight: bold;">➕ Save Current</button>
-        </h4>
-        
-        <input id="collection-name-input" type="text" style="width: 100%; background-color: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px; font-size: 12px; padding: 4px 6px; box-sizing: border-box; margin-bottom: 8px;" placeholder="e.g., Fetch User Profile Data">
-        
-        <div id="collections-list-container" style="font-family: monospace; font-size: 13px; color: #c9d1d9; max-height: 200px; overflow-y: auto;">
-            <span style="color: #8b949e; font-style: italic;">No collections bookmarked locally...</span>
+<!-- MAIN -->
+<main class="main-content">
+    <nav class="tab-bar">
+        <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+        <button class="tab" onclick="switchTab('api',this)">🛰️ API Studio</button>
+        <button class="tab" onclick="switchTab('sql',this)">💻 SQL</button>
+        <button class="tab" onclick="switchTab('flows',this)">🔀 Flows</button>
+        <button class="tab" onclick="switchTab('monitors',this)">⏱ Monitors</button>
+        <button class="tab" onclick="switchTab('history',this)">📜 History</button>
+        <button class="tab" onclick="switchTab('plugins',this)">🐍 Plugins</button>
+        <button class="tab" onclick="switchTab('docs',this)">📝 Docs</button>
+        <button class="tab" onclick="switchTab('ai',this)">🤖 AI</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <section class="tab-content active" id="tab-dashboard">
+        <div class="grid-2">
+            <div class="card"><h3 class="card-title">CPU</h3><div id="cpu-val" class="metric-value">0%</div><div class="chart-wrap"><canvas id="cpu-canvas" width="400" height="120"></canvas></div></div>
+            <div class="card"><h3 class="card-title">Memory</h3><div id="mem-val" class="metric-value">0 / 0 MB</div><div class="mem-bar-wrap"><div class="mem-bar" id="mem-bar"></div></div><div class="sb-hint mt-4">Slot: <span id="log-slot" class="text-yellow">—</span></div></div>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Telemetry History</h3><button class="btn btn-sm" onclick="loadTelemetry()">Load</button><pre id="telem-pane" class="code-output mt-8">// Click Load</pre></div>
+    </section>
+
+    <!-- API STUDIO -->
+    <section class="tab-content" id="tab-api">
+        <!-- Protocol Tabs -->
+        <div class="proto-bar">
+            <button class="proto-tab active" onclick="switchProto('rest',this)">REST</button>
+            <button class="proto-tab" onclick="switchProto('graphql',this)">GraphQL</button>
+            <button class="proto-tab" onclick="switchProto('ws',this)">WebSocket</button>
+            <button class="proto-tab" onclick="switchProto('grpc',this)">gRPC</button>
+            <button class="proto-tab" onclick="switchProto('mqtt',this)">MQTT</button>
+            <button class="proto-tab" onclick="switchProto('stream',this)">Streams</button>
+        </div>
+
+        <!-- REST -->
+        <div class="proto-panel active" id="proto-rest">
+            <div class="card">
+                <div class="method-bar">
+                    <button class="method-btn active" onclick="setMethod('GET',this)">GET</button>
+                    <button class="method-btn" onclick="setMethod('POST',this)">POST</button>
+                    <button class="method-btn" onclick="setMethod('PUT',this)">PUT</button>
+                    <button class="method-btn" onclick="setMethod('DELETE',this)">DELETE</button>
+                    <button class="method-btn" onclick="setMethod('PATCH',this)">PATCH</button>
+                    <input type="text" id="api-url" class="url-input" value="{{baseUrl}}/get" placeholder="https://…">
+                    <button class="btn" onclick="sendRequest()">Send</button>
+                </div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><div class="card-title-row"><h3 class="card-title">Headers</h3><button class="sb-action" onclick="addKv('hdr-matrix')">＋</button></div><div id="hdr-matrix"></div></div>
+                <div class="card"><h3 class="card-title">Body</h3><textarea id="req-body" class="code-textarea" placeholder='{"key":"value"}'></textarea></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><div class="card-title-row"><h3 class="card-title">Form Data</h3><button class="sb-action" onclick="addKv('form-matrix')">＋</button></div><div id="form-matrix"></div></div>
+                <div class="card"><h3 class="card-title">Pre-request Script</h3><textarea id="prereq-script" class="code-textarea" style="height:60px" placeholder="// lb.setVariable('ts', Date.now());"></textarea></div>
+            </div>
+            <div class="card mt-16">
+            <div class="card-title-row"><h3 class="card-title">Test Scripts</h3><div style="display:flex;gap:6px"><button class="btn btn-xs btn-purple" onclick="aiGenTests()">🤖 AI Generate</button><button class="btn btn-xs" onclick="aiChainNext()">🔗 Chain Next</button><button class="btn btn-xs btn-outline" onclick="aiExplain()">💡 Explain</button></div></div>
+            <textarea id="test-script" class="code-textarea" style="height:80px" placeholder='lb.test("Status OK", ()=> lb.expect(lb.response.status).toBe(200));'></textarea><pre id="test-output" class="code-output mt-8">// idle</pre>
+        </div>
+        </div>
+
+        <!-- GRAPHQL -->
+        <div class="proto-panel" id="proto-graphql">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">GraphQL</span><input type="text" id="gql-host" class="url-input" placeholder="api.example.com"><input type="text" id="gql-path" class="url-input" style="max-width:200px" value="/graphql" placeholder="/graphql"><button class="btn" onclick="sendGraphQL()">Query</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Query</h3><textarea id="gql-query" class="code-textarea" style="height:200px" placeholder="query { users { id name } }"></textarea></div>
+                <div class="card"><h3 class="card-title">Variables</h3><textarea id="gql-vars" class="code-textarea" style="height:200px" placeholder='{"id": 1}'></textarea></div>
+            </div>
+        </div>
+
+        <!-- WEBSOCKET -->
+        <div class="proto-panel" id="proto-ws">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">WebSocket</span><input type="text" id="ws-url" class="url-input" placeholder="wss://echo.websocket.org"><button class="btn" id="ws-connect-btn" onclick="wsConnect()">Connect</button></div>
+            </div>
+            <div class="card mt-16"><h3 class="card-title">Send Message</h3><div style="display:flex;gap:8px"><input type="text" id="ws-msg" class="url-input" placeholder="Hello!"><button class="btn btn-sm" onclick="wsSend()">Send</button></div></div>
+            <div class="card mt-16"><h3 class="card-title">Message Log</h3><pre id="ws-log" class="code-output" style="height:300px">// Connect to start…</pre></div>
+        </div>
+
+        <!-- gRPC -->
+        <div class="proto-panel" id="proto-grpc">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">gRPC</span><input type="text" id="grpc-target" class="url-input" placeholder="localhost:50051"><button class="btn" onclick="grpcInvoke()">Invoke</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Service / Method</h3><input type="text" id="grpc-service" class="sb-input" placeholder="helloworld.Greeter"><input type="text" id="grpc-method" class="sb-input mt-4" placeholder="SayHello"></div>
+                <div class="card"><h3 class="card-title">Message (JSON)</h3><textarea id="grpc-payload" class="code-textarea" style="height:120px" placeholder='{"name":"LightBase"}'></textarea></div>
+            </div>
+            <div class="card mt-16"><h3 class="card-title">Response</h3><pre id="grpc-output" class="code-output" style="height:200px">// Waiting…</pre></div>
+        </div>
+
+        <!-- MQTT -->
+        <div class="proto-panel" id="proto-mqtt">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">MQTT</span><input type="text" id="mqtt-broker" class="url-input" placeholder="broker.hivemq.com"><input type="number" id="mqtt-port" class="sb-input" style="width:80px" value="1883"><button class="btn" onclick="mqttPublish()">Publish</button><button class="btn btn-purple" onclick="mqttSubscribe()">Subscribe</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Topic</h3><input type="text" id="mqtt-topic" class="sb-input" value="lightbase/test"><h3 class="card-title mt-8">Payload</h3><textarea id="mqtt-payload" class="code-textarea" style="height:80px" placeholder='{"sensor":"temp","value":22.5}'></textarea></div>
+                <div class="card"><h3 class="card-title">Messages</h3><pre id="mqtt-log" class="code-output" style="height:200px">// Idle</pre></div>
+            </div>
+        </div>
+
+        <!-- STREAMS -->
+        <div class="proto-panel" id="proto-stream">
+            <div class="card">
+                <div class="method-bar">
+                    <select id="stream-type" class="sb-select" style="width:100px"><option value="ws">WebSocket</option><option value="sse">SSE</option></select>
+                    <input type="text" id="stream-url" class="url-input" placeholder="wss://… or https://…/events">
+                    <label class="field-label" style="flex-direction:row;align-items:center;gap:4px">Duration<input id="stream-dur" type="number" class="sb-input" value="10" style="width:60px">s</label>
+                    <button class="btn" onclick="startStream()">▶ Stream</button>
+                </div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Live Data</h3><div class="stream-stats" id="stream-stats">Messages: <span id="stream-count">0</span> | Rate: <span id="stream-rate">0</span>/sec</div><pre id="stream-log" class="code-output" style="height:350px">// Connect to start streaming…</pre></div>
+                <div class="card"><h3 class="card-title">Message Inspector</h3><pre id="stream-inspect" class="code-output" style="height:350px">// Click a message to inspect</pre></div>
+            </div>
+        </div>
+
+        <!-- RESPONSE VIEWER (shared) -->
+        <div class="card mt-16" id="response-card">
+            <div class="card-title-row"><h3 class="card-title">Response</h3><span class="badge" id="resp-badge">—</span></div>
+            <div class="response-meta"><span>⏱ <span id="resp-lat">0 µs</span></span><span>📦 <span id="resp-size">0 B</span></span><span>Protocol: <span id="resp-proto" class="text-cyan">REST</span></span></div>
+            <input id="resp-filter" type="text" class="sb-input" oninput="filterResp()" placeholder="🔍 Filter…" style="margin-bottom:8px">
+            <pre id="resp-viewer" class="code-output" style="height:280px">// Awaiting…</pre>
+            <details class="mt-8"><summary class="text-muted" style="cursor:pointer;font-size:12px">Hex Dump</summary><pre id="hex-viewer" class="code-output" style="height:140px;font-size:11px"></pre></details>
+            <details class="mt-8"><summary class="text-muted" style="cursor:pointer;font-size:12px">Visualizer</summary><div style="margin-top:8px"><textarea id="viz-code" class="code-textarea" style="height:60px" placeholder='// HTML/CSS/JS — use `data` variable&#10;document.body.innerHTML = "<h1>"+data.url+"</h1>";'></textarea><button class="btn btn-xs mt-4" onclick="runVisualizer()">▶ Render</button><iframe id="viz-frame" sandbox="allow-scripts" class="viz-iframe"></iframe></div></details>
+        </div>
+        <!-- Stress -->
+        <div class="card mt-16"><h3 class="card-title">🏎️ Stress Test</h3><div style="display:flex;gap:12px;align-items:end;margin-bottom:12px"><label class="field-label">Count<input id="stress-n" type="number" class="sb-input" value="20" style="width:80px"></label><label class="field-label">Delay(ms)<input id="stress-d" type="number" class="sb-input" value="100" style="width:80px"></label><button class="btn btn-danger" onclick="runStress()">🔥 Ignite</button></div><pre id="stress-log" class="code-output" style="height:120px">// Ready</pre></div>
+    </section>
+
+    <!-- SQL -->
+    <section class="tab-content" id="tab-sql">
+        <div class="card"><h3 class="card-title">SQL Console</h3><textarea id="sql-input" class="code-textarea" style="height:140px" placeholder="SELECT * FROM users;"></textarea><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span class="text-muted">Speed: <span id="sql-lat" class="text-cyan">0 µs</span></span><button class="btn" onclick="runSQL()">⚡ Execute</button></div><pre id="sql-output" class="code-output mt-8" style="height:300px">// Results</pre></div>
+    </section>
+
+    <!-- FLOWS -->
+    <section class="tab-content" id="tab-flows">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">Visual Flow Builder</h3>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-xs" onclick="addFlowNode('request')">＋ Request</button>
+                    <button class="btn btn-xs btn-purple" onclick="addFlowNode('condition')">＋ Condition</button>
+                    <button class="btn btn-xs btn-outline" onclick="addFlowNode('transform')">＋ Transform</button>
+                    <button class="btn btn-xs" style="background:var(--accent-yellow);color:#000" onclick="addFlowNode('ai')">＋ AI Block</button>
+                    <input type="text" id="flow-name" class="sb-input" placeholder="Flow name" style="width:140px">
+                    <button class="btn btn-xs" onclick="saveFlow()">💾 Save</button>
+                    <button class="btn btn-xs btn-danger" onclick="runFlow()">▶ Run</button>
+                </div>
+            </div>
+            <div id="flow-canvas" class="flow-canvas"></div>
+            <pre id="flow-output" class="code-output mt-8" style="height:150px">// Flow output</pre>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Saved Flows</h3><div id="flow-list" class="sb-tree-area"><span class="text-muted">None</span></div></div>
+    </section>
+
+    <!-- MONITORS -->
+    <section class="tab-content" id="tab-monitors">
+        <div class="card">
+            <h3 class="card-title">Collection Monitors</h3>
+            <div style="display:flex;gap:12px;align-items:end;margin-bottom:12px">
+                <label class="field-label">Collection<select id="mon-col" class="sb-select" style="width:200px"></select></label>
+                <label class="field-label">Interval (sec)<input id="mon-interval" type="number" class="sb-input" value="60" style="width:80px"></label>
+                <button class="btn" onclick="runMonitorOnce()">▶ Run Once</button>
+                <button class="btn btn-purple" onclick="scheduleMonitor()">⏱ Schedule</button>
+            </div>
+            <pre id="mon-output" class="code-output" style="height:250px">// Monitor results</pre>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Active Monitors</h3><div id="mon-list"></div></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="tab-content" id="tab-history">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">Request History</h3><div style="display:flex;gap:6px"><button class="btn btn-xs" onclick="exportNotebook('history')">📓 Export .ipynb</button><button class="btn btn-xs btn-outline" onclick="exportPython('history')">🐍 Export .py</button><button class="btn btn-xs btn-danger" onclick="clearHistory()">🗑 Clear</button></div></div>
+            <input type="text" id="hist-search" class="sb-input" placeholder="🔍 Search history…" oninput="loadHistory()">
+            <div id="hist-list" class="mt-8"></div>
+        </div>
+    </section>
+
+    <!-- PLUGINS -->
+    <section class="tab-content" id="tab-plugins">
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title-row"><h3 class="card-title">Plugin Editor</h3><div style="display:flex;gap:6px"><button class="btn btn-xs" onclick="savePlugin()">💾 Save</button><button class="btn btn-xs btn-purple" onclick="runPlugin()">▶ Run</button></div></div>
+                <input type="text" id="plugin-name" class="sb-input" placeholder="my_plugin" style="margin-bottom:8px">
+                <textarea id="plugin-code" class="code-textarea" style="height:250px" placeholder='import json
+
+def run(context):
+    """Process API request/response data"""
+    # context has: url, method, body, response
+    data = context.get("response", {})
+    return {"processed": True, "keys": list(data.keys())}'></textarea>
+                <pre id="plugin-output" class="code-output mt-8" style="height:120px">// Output appears here</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Installed Plugins</h3>
+                <div id="plugin-list" class="sb-tree-area" style="max-height:200px"><span class="text-muted">None</span></div>
+                <h3 class="card-title mt-16">📦 Package Installer</h3>
+                <div style="display:flex;gap:8px"><input type="text" id="pip-pkg" class="sb-input" placeholder="pandas, numpy, beautifulsoup4…"><button class="btn btn-xs" onclick="pipInstall()">Install</button></div>
+                <pre id="pip-output" class="code-output mt-8" style="height:80px">// pip output</pre>
+                <h3 class="card-title mt-16">How Plugins Work</h3>
+                <div class="sb-hint">Write a Python script with a <code>run(context)</code> function. The context dict contains the current request URL, method, body, headers, and response data. Import any PyPI package — pandas, numpy, scikit-learn, beautifulsoup4, etc. Return processed data back to the UI.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DOCS -->
+    <section class="tab-content" id="tab-docs">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">API Documentation</h3>
+                <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="genDocs()">🛠️ Schema Docs</button><button class="btn btn-sm btn-purple" onclick="exportOpenAPI()">📋 Export OpenAPI</button></div>
+            </div>
+            <textarea id="docs-pane" class="code-textarea" style="height:400px" placeholder="// Generated docs…" readonly></textarea>
+        </div>
+    </section>
+
+    <!-- AI -->
+    <section class="tab-content" id="tab-ai">
+        <div class="card"><h3 class="card-title">🤖 AI Companion</h3><div style="display:flex;gap:10px;margin-bottom:12px"><input type="text" id="ai-input" class="url-input" placeholder="Ask anything…"><button class="btn btn-purple" onclick="aiInfer()">Infer</button></div><pre id="ai-output" class="code-output" style="height:350px;color:#e2b4ff">// Idle</pre></div>
+    </section>
+
+    <!-- ENV EDITOR MODAL -->
+    <div id="env-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="card-title-row"><h3 class="card-title">Environment Variables</h3><button class="sb-action text-red" onclick="closeEnvEditor()">✕</button></div>
+            <div id="env-vars-editor"></div>
+            <button class="sb-action text-green" onclick="addEnvVar()">＋ Add Variable</button>
+            <button class="btn mt-8 w-full" onclick="saveEnvVars()">💾 Save</button>
         </div>
     </div>
+</main>
 
-</div>
-
-<div class="main-content">
-    <h1>⚡ LightBase Studio Cockpit</h1>
-    <p>Status: <span style="color: #56d364; font-weight: bold;">CONNECTED VIA ASYNC THREAD POOL</span></p>
-
-    <div class="grid">
-        <div class="panel">
-            <h3>📊 Host OS Metrics (/proc/stat)</h3>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <div>
-                    <div>CPU Utilization:</div>
-                    <div id="cpu-metric" class="metric">0.00 %</div>
-                </div>
-                <div>
-                    <div>Available RAM Block:</div>
-                    <div id="mem-metric" class="metric">0 MB / 0 MB</div>
-                </div>
-            </div>
-
-            <div style="border: 1px solid #30363d; background: #010409; border-radius: 4px; padding: 5px; margin-top: 15px;">
-                <canvas id="telemetry-canvas" width="300" height="100" style="width: 100%; height: 100px; display: block;"></canvas>
-            </div>
-
-            <p style="margin-top: 10px; margin-bottom: 0;">Disk Write Head Ring Log Slot: <span id="log-slot" style="color: #e3b341; font-weight: bold;">--</span></p>
-        </div>
-
-        <div class="console-workspace-card" style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; margin-top: 20px;">
-            <h3 style="color: #c9d1d9; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                🗄️ CUSTOM MEMORY ARENA SQL CONSOLE
-                <button onclick="executeSqlScriptBatch()" style="background-color: #238636; color: white; border: 1px solid #2ea44f; padding: 4px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px;">⚡ Execute Batch</button>
-            </h3>
-            
-            <textarea id="sql-console-input" style="width: 100%; height: 120px; background-color: #161b22; color: #79c0ff; border: 1px solid #30363d; border-radius: 4px; font-family: 'JetBrains Mono', monospace; padding: 10px; box-sizing: border-box; resize: vertical;" placeholder="-- Type your raw multi-statement SQL queries here...&#10;SELECT * FROM users LIMIT 3;"></textarea>
-            
-            <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 12px; color: #8b949e;">
-                <span>C-Core Processing Speed: <span id="sql-latency-tag" style="color: #58a6ff; font-weight: bold;">0.00 us</span></span>
-            </div>
-            <pre id="sql-output-pane" style="margin-top: 10px; background-color: #010409; border: 1px solid #21212d; border-radius: 4px; padding: 10px; height: 150px; overflow-y: auto; color: #39d353; font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: pre-wrap;">// Executed raw statement records map output logs...</pre>
-        </div>
-
-        <div class="panel">
-            <h3>🌐 Cryptographic TLS HTTPS Studio Client</h3>
-            <div style="display: flex; gap: 5px; margin-bottom: 12px;">
-                <button class="btn method-btn" style="padding: 6px 10px; font-size: 11px; background-color: #238636;" onclick="selectNetworkMethod('GET')">GET</button>
-                <button class="btn method-btn" style="padding: 6px 10px; font-size: 11px; background-color: #21262d;" onclick="selectNetworkMethod('POST')">POST</button>
-                <button class="btn method-btn" style="padding: 6px 10px; font-size: 11px; background-color: #21262d;" onclick="selectNetworkMethod('PUT')">PUT</button>
-                <button class="btn method-btn" style="padding: 6px 10px; font-size: 11px; background-color: #21262d;" onclick="selectNetworkMethod('DELETE')">DELETE</button>
-            </div>
-
-            <!-- 🎯 TARGET MU: THE INTERACTIVE CUSTOM REQUEST HEADER GRID MATRIX -->
-            <div class="headers-workspace-card" style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
-                <h3 style="color: #c9d1d9; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    📋 CUSTOM REQUEST HEADERS
-                    <button onclick="addNewHeaderRowField()" style="background: none; border: none; color: #58a6ff; cursor: pointer; font-size: 13px; font-weight: bold;">➕ Add Row</button>
-                </h3>
-                
-                <div id="headers-matrix-container" style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="header-row-item" style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" class="header-key-input" style="flex: 1; background-color: #161b22; color: #79c0ff; border: 1px solid #30363d; border-radius: 4px; font-size: 12px; padding: 6px 8px; font-family: monospace;" placeholder="Key (e.g., Authorization)">
-                        <input type="text" class="header-value-input" style="flex: 1; background-color: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px; font-size: 12px; padding: 6px 8px; font-family: monospace;" placeholder="Value">
-                        <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #f85149; cursor: pointer; font-weight: bold; font-size: 14px;">✕</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 🎯 TARGET NU: THE INTERACTIVE JSON REQUEST BODY PAYLOAD CONSOLE PANE -->
-            <div class="body-workspace-card" style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; margin-top: 15px; margin-bottom: 15px;">
-                <h3 style="color: #c9d1d9; font-size: 14px; margin-bottom: 10px;">
-                    🌐 REQUEST BODY (JSON)
-                </h3>
-                <textarea id="request-body-input" style="width: 100%; height: 100px; background-color: #161b22; color: #ff7b72; border: 1px solid #30363d; border-radius: 4px; font-family: 'JetBrains Mono', monospace; padding: 8px 10px; box-sizing: border-box; resize: vertical;" placeholder="{&#10;    &quot;status&quot;: &quot;active&quot;,&#10;    &quot;developer&quot;: &quot;{{authToken}}&quot;&#10;}"></textarea>
-            </div>
-
-            <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                <input type="text" id="api-endpoint" value="jsonplaceholder.typicode.com/posts/1" style="flex: 1; background: #0d1117; color: var(--text-main); border: 1px solid #30363d; padding: 6px; border-radius: 4px; font-family: inherit;">
-            </div>
-
-            <button class="btn" style="background-color: #1f6feb; width: 100%; margin-bottom: 20px;" onclick="runStudioAPIRequest()">Fire Secure Handshake</button>
-            
-            <div class="response-workspace-card" style="background-color: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 15px; display: flex; flex-direction: column;">
-                <h3 style="color: #c9d1d9; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #21262d; padding-bottom: 8px;">
-                    <span>🌐 RESPONSE PAYLOAD OUTFLOW</span>
-                    <span style="font-size: 12px; color: #8b949e;">Status Code: <span id="response-status-badge" style="color: #58a6ff; font-weight: bold;">--</span></span>
-                </h3>
-                
-                <div style="display: flex; gap: 20px; margin-bottom: 12px; background-color: #161b22; padding: 8px 12px; border-radius: 4px; border: 1px solid #21262d; font-size: 12px; font-family: monospace;">
-                    <div style="color: #8b949e;">⏱️ C-Core Socket Latency: <span id="net-latency-tag" style="color: #39d353; font-weight: bold;">0.00 us</span></div>
-                    <div style="color: #8b949e;">📊 Wire Payload Footprint: <span id="net-bytes-tag" style="color: #58a6ff; font-weight: bold;">0 Bytes</span></div>
-                    <div style="color: #8b949e;">💾 Virtual Memory Address: <span style="color: #e3b341; font-weight: bold;">0x7f29f1c1f000</span></div>
-                </div>
-
-                <pre id="response-payload-viewer" style="flex-grow: 1; margin: 0; background-color: #010409; border: 1px solid #21262d; border-radius: 4px; padding: 12px; height: 350px; overflow-y: auto; color: #ff7b72; font-family: 'JetBrains Mono', monospace; font-size: 13px; white-space: pre-wrap; word-break: break-all;">// Awaiting outbound network handshake or database engine script activation...</pre>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-    const API_BASE = "http://localhost:8000";
-    // --- LIVE OSCILLOSCOPE GRAPH RENDERING ENGINE (TARGET GAMMA) ---
-    const cpuHistory = [];
-    const MAX_HISTORY_POINTS = 30;
-    let currentEnv = 'Development'; // Track active target state track
-
-    const environments = {
-        dev: {
-            baseUrl: 'localhost:3000',
-            authToken: 'Bearer dev_token_123',
-            timeout: '5000'
-        },
-        staging: {
-            baseUrl: 'staging.lightbase.app',
-            authToken: 'Bearer staging_token_abc',
-            timeout: '8000'
-        },
-        prod: {
-            baseUrl: 'api.lightbase.app',
-            authToken: 'Bearer prod_token_xyz',
-            timeout: '10000'
-        }
-    };
-
-    // 2. The Variable Resolution Engine
-    function resolveEnvironmentTokens(inputString) {
-        if (!inputString) return inputString;
-
-        // Grab the specific variable dictionary for our active environment state
-        const activeTokens = environments[currentEnv];
-
-        // Scan the string for {{variableName}} patterns and replace them dynamically!
-        return inputString.replace(/{{([^}]+)}}/g, (match, key) => {
-            const trimmedKey = key.trim();
-            if (activeTokens.hasOwnProperty(trimmedKey)) {
-                return activeTokens[trimmedKey]; // Inject the real value!
-            }
-            return match; // If token doesn't exist, leave it as {{variable}}
-        });
-    }
-
-    // --- FETCH SIDEBAR CATALOG METADATA (MODULE 3) ---
-    async function refreshDatabaseSchema() {
-        try {
-            // Pass target data via standard body structures matching Python schema endpoint tags
-            const payload = { db_path: "test_lightbase.db" };
-            const res = await fetch(`${API_BASE}/query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ target: "schema_scan", db_path: "test_lightbase.db" })
-            });
-
-            // Note: Ensure python_bridge.py routes custom "schema_scan" payloads accordingly
-            // We'll update the bridge to fully map this if needed, but let's test visibility first!
-            const data = await res.json();
-
-            const tablesContainer = document.getElementById('sidebar-tables');
-            const viewsContainer = document.getElementById('sidebar-views');
-
-            tablesContainer.innerHTML = '';
-            viewsContainer.innerHTML = '';
-
-            if (data.db_data && data.db_data.tables) {
-                data.db_data.tables.forEach(table => {
-                    const item = document.createElement('div');
-                    item.className = 'tree-item';
-                    item.innerText = table;
-                    item.onclick = () => { alert(`Selected Table: ${table}`); };
-                    tablesContainer.appendChild(item);
-                });
-            } else {
-                tablesContainer.innerHTML = '<div style="font-size:12px; color:#8b949e; padding-left:10px;">No tables detected</div>';
-            }
-
-            if (data.db_data && data.db_data.views) {
-                data.db_data.views.forEach(view => {
-                    const item = document.createElement('div');
-                    item.className = 'tree-item';
-                    item.innerText = view;
-                    viewsContainer.appendChild(item);
-                });
-            } else {
-                viewsContainer.innerHTML = '<div style="font-size:12px; color:#8b949e; padding-left:10px;">No views detected</div>';
-            }
-        } catch (err) {
-            console.error("Failed to map database schema metadata catalog tree:", err);
-        }
-    }
-
-    async function pollSystemMetrics() {
-        try {
-            const res = await fetch(`${API_BASE}/sys_metrics`, { method: 'POST' });
-            const data = await res.json();
-            const metrics = data.system_telemetry;
-
-            document.getElementById('cpu-metric').innerText = `${metrics.cpu_usage.toFixed(2)} %`;
-
-            // Push raw value into tracker and clip trailing window bounds
-            cpuHistory.push(metrics.cpu_usage);
-            if (cpuHistory.length > MAX_HISTORY_POINTS) {
-                cpuHistory.shift();
-            }
-
-            // Re-execute painter pipeline loop
-            drawTelemetryGraph();
-
-            const totalMemMB = Math.round(metrics.mem_total_kb / 1024);
-            const availMemMB = Math.round(metrics.mem_avail_kb / 1024);
-            document.getElementById('mem-metric').innerText = `${availMemMB} MB / ${totalMemMB} MB`;
-            document.getElementById('log-slot').innerText = metrics.last_logged_slot !== undefined ? metrics.last_logged_slot : "--";
-        } catch (err) {
-            console.error("Failed to poll host kernel matrices:", err);
-        }
-    }
-
-    // --- ARENA-POWERED SQL CONSOLE COMMAND RUNNER ---
-    async function executeSqlScriptBatch() {
-        const queryInput = document.getElementById('sql-console-input').value.trim();
-        const outputPane = document.getElementById('sql-output-pane');
-        const latencyTag = document.getElementById('sql-latency-tag');
-        
-        if (!queryInput) {
-            outputPane.innerHTML = "<span style='color: #f85149;'>// Notice: Statement entry field is empty.</span>";
-            return;
-        }
-        
-        outputPane.innerHTML = "<span style='color: #8b949e;'>// Dispatching query block down to C-Core Arena structures...</span>";
-        
-        try {
-            // Automatically determine our database filename mapping based on our dropdown environment state
-            const activeDb = currentEnv === 'Production' ? 'prod_lightbase.sovereign.db' : 
-                             currentEnv === 'Staging' ? 'staging_lightbase.db' : 'test_lightbase.db';
-
-            const res = await fetch("http://localhost:8000/query", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "execute_query",
-                    db_path: activeDb,
-                    query: queryInput
-                })
-            });
-            
-            const data = await res.json();
-            
-            // Render out the native database results into our clean output terminal container block
-            outputPane.textContent = JSON.stringify(data.db_data || data, null, 4);
-            
-            // Dynamically update the bare-metal processing duration telemetry tags on screen!
-            const latency = data.telemetry ? data.telemetry.c_core_duration_us : 0;
-            latencyTag.innerText = `${latency.toFixed(2)} us`;
-            
-            // 🔥 RE-HARVEST: Instantly trigger a sidebar tree scan to reflect any schema changes (like CREATE TABLE)!
-            await refreshSchemaTree();
-            
-        } catch (err) {
-            outputPane.innerHTML = `<span style='color: #f85149;'>// C-Core Bridge Fault: ${err.message || err}</span>`;
-        }
-    }
-
-    // --- MUTATE ENVIRONMENT TARGET PATHS (MODULE 1) ---
-    async function switchStudioEnvironment() {
-        const selectedEnv = document.getElementById('env-selector').value;
-        currentEnv = selectedEnv; // Update global state tracking token
-        
-        // Determine which database file register path our C-Core needs to map onto its Arena allocations
-        const targetDb = selectedEnv === 'Production' ? 'prod_lightbase.sovereign.db' : 
-                         selectedEnv === 'Staging' ? 'staging_lightbase.db' : 'test_lightbase.db';
-                         
-        console.log(`[Studio UI] Mutating active environment workspace track target to: ${targetDb}`);
-        
-        try {
-            // Fire the mutation request down across your native, zero-dependency Python server link!
-            const res = await fetch(`${API_BASE}/query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "set_env",
-                    env_name: selectedEnv,
-                    db_path: targetDb
-                })
-            });
-            const data = await res.json();
-
-            // Update interface states dynamically based on the atomic core pointer swap
-            document.getElementById('current-env-label').innerText = `${selectedEnv} Track`;
-            console.log("[Studio Environment] Core mutated to:", data.db_data);
-
-            // 🔥 CRITICAL CHAIN: Automatically trigger a schema catalog harvesting scan on the newly mapped DB file!
-            await refreshSchemaTree();
-            
-            // Instantly force-refresh the database structure sidebar catalog tree to view new tables!
-            // refreshDatabaseSchema(); 
-        } catch (err) {
-            console.error("[Studio UI Error] Failed to complete environmental context target swap:", err);
-        }
-    }
-
-    // --- GLOBAL NETWORK METHOD STATE ---
-    let activeMethod = 'GET'; // Default to standard GET operations
-
-    // Button Matrix Selector Hook
-    function selectNetworkMethod(methodName) {
-        activeMethod = methodName.toUpperCase();
-        
-        // Visually update the button styling classes using pure DOM lookups
-        const buttons = document.querySelectorAll('.method-btn');
-        buttons.forEach(btn => {
-            if (btn.innerText.trim() === activeMethod) {
-                btn.style.backgroundColor = '#238636'; // Bright green active state signature
-                btn.style.borderColor = '#2ea44f';
-            } else {
-                btn.style.backgroundColor = '#21262d'; // Dark slate idle state signature
-                btn.style.borderColor = '#30363d';
-            }
-        });
-        
-        console.log(`[Studio UI] Active cryptographic routing token mutated to: ${activeMethod}`);
-    }
-
-    // --- DYNAMIC HEADER DOM ROW FACTORY ---
-    function addNewHeaderRowField() {
-        const container = document.getElementById('headers-matrix-container');
-        const newRow = document.createElement('div');
-        newRow.className = 'header-row-item';
-        newRow.style.display = 'flex';
-        newRow.style.gap = '10px';
-        newRow.style.alignItems = 'center';
-        
-        newRow.innerHTML = `
-            <input type="text" class="header-key-input" style="flex: 1; background-color: #161b22; color: #79c0ff; border: 1px solid #30363d; border-radius: 4px; font-size: 12px; padding: 6px 8px; font-family: monospace;" placeholder="Key">
-            <input type="text" class="header-value-input" style="flex: 1; background-color: #161b22; color: #c9d1d9; border: 1px solid #30363d; border-radius: 4px; font-size: 12px; padding: 6px 8px; font-family: monospace;" placeholder="Value">
-            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: #f85149; cursor: pointer; font-weight: bold; font-size: 14px;">✕</button>
-        `;
-        container.appendChild(newRow);
-    }
-
-    // --- EXECUTE HIGH-PERFORMANCE API TESTING CORE (MODULE 2) ---
-    async function runStudioAPIRequest() {
-        // Grab pointers to our fresh response terminal elements
-        const payloadViewer = document.getElementById('response-payload-viewer');
-        const statusBadge = document.getElementById('response-status-badge');
-        const netLatencyTag = document.getElementById('net-latency-tag');
-        const netBytesTag = document.getElementById('net-bytes-tag');
-
-        try {
-            const method = activeMethod;
-            const rawUrl = document.getElementById('api-endpoint').value;
-
-            // Split host and path bounds cleanly using standard string parsing
-            const slashIndex = rawUrl.indexOf('/');
-            const host = slashIndex !== -1 ? rawUrl.substring(0, slashIndex) : rawUrl;
-            const path = slashIndex !== -1 ? rawUrl.substring(slashIndex) : "/";
-
-            payloadViewer.textContent = "// Initializing secure OpenSSL TLS handshake...";
-            statusBadge.innerText = "--";
-            statusBadge.style.color = "#58a6ff";
-            netBytesTag.innerText = "0 Bytes";
-
-            // 🎯 LOOP AND HARVEST HEADERS DIRECTLY OFF THE DOM ROWS!
-            const headerRows = document.querySelectorAll('.header-row-item');
-            const compiledHeadersArray = [];
-            
-            headerRows.forEach(row => {
-                const keyToken = row.querySelector('.header-key-input').value.trim();
-                const valueToken = row.querySelector('.header-value-input').value.trim();
-                
-                // Resolve environment tokens (like {{authToken}}) dynamically on the fly before passing!
-                if (keyToken && valueToken) {
-                    compiledHeadersArray.push({
-                        key: resolveEnvironmentTokens(keyToken),
-                        value: resolveEnvironmentTokens(valueToken)
-                    });
-                }
-            });
-
-            const rawBodyInput = document.getElementById('request-body-input').value.trim();
-            
-            // Resolve any embedded environment tokens (like {{authToken}}) inside your JSON body string!
-            const resolvedBody = resolveEnvironmentTokens(rawBodyInput);
-
-            const res = await fetch(`${API_BASE}/request`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "api_studio_run",
-                    method: activeMethod, 
-                    query: method, 
-                    hostname: host,
-                    path: path,
-                    headers: compiledHeadersArray,
-                    body_payload: resolvedBody // 🎯 STREAM THE SANITIZED JSON STRING HERE!
-                })
-            });
-            const data = await res.json();
-
-            // 🎯 STEP 1: Format the status code headers returned via Python bridge
-            statusBadge.innerText = data.engine_status || "200 OK";
-            statusBadge.style.color = (data.engine_status >= 400) ? "#f85149" : "#39d353";
-
-            // 🎯 STEP 2: Extract the raw network payload data and parse it into structural multi-line JSON text strings
-            let rawJsonString = "";
-            if (data.network_data) {
-                rawJsonString = JSON.stringify(data.network_data, null, 4);
-                payloadViewer.textContent = rawJsonString;
-                payloadViewer.style.color = "#79c0ff"; // Sleek cyan/blue color profile for success blocks
-            } else {
-                rawJsonString = JSON.stringify(data, null, 4);
-                payloadViewer.textContent = rawJsonString;
-                payloadViewer.style.color = "#ff7b72"; // Orange-red profile for fallback tracking objects
-            }
-
-            // ⚡ CALCULATE AND PAINT THE EXACT PACKET SIZE FOOTPRINT IN REAL TIME! ⚡
-            const totalPayloadBytes = new Blob([rawJsonString]).size;
-            netBytesTag.innerText = totalPayloadBytes >= 1024 
-                ? `${(totalPayloadBytes / 1024).toFixed(2)} KB (${totalPayloadBytes} Bytes)` 
-                : `${totalPayloadBytes} Bytes`;
-
-            // 🎯 STEP 3: Update the bare-metal processing speed telemetry stats inside the bar matrix panel!
-            const coreDuration = data.telemetry ? data.telemetry.c_core_duration_us : 0.00;
-            netLatencyTag.innerText = `${coreDuration.toFixed(2)} us`;
-        } catch (err) {
-            payloadViewer.textContent = `API Studio Execution Error: ${err}`;
-            payloadViewer.style.color = "#f85149";
-            statusBadge.innerText = "ERR";
-            statusBadge.style.color = "#f85149";
-        }
-    }
-
-    function drawTelemetryGraph() {
-        const canvas = document.getElementById('telemetry-canvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-
-        const width = canvas.width;
-        const height = canvas.height;
-
-        // 1. Wipe the frame clear for the next frame render track
-        ctx.clearRect(0, 0, width, height);
-
-        // 2. Draw subtle background grid alignment guide lines
-        ctx.strokeStyle = '#161b22';
-        ctx.lineWidth = 1;
-        for (let i = 20; i < height; i += 20) {
-            ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(width, i); ctx.stroke();
-        }
-
-        if (cpuHistory.length < 2) return;
-
-        // 3. Assemble and stroke the real-time vector path string
-        ctx.beginPath();
-        ctx.strokeStyle = '#58a6ff'; // Telemetry Cyan
-        ctx.lineWidth = 2;
-        ctx.lineJoin = 'round';
-
-        for (let i = 0; i < cpuHistory.length; i++) {
-            // Map array index onto horizontal x axis
-            const x = (i / (MAX_HISTORY_POINTS - 1)) * width;
-            // Invert and map the 0-100% scale onto canvas vertical height bounds
-            const y = height - (cpuHistory[i] / 100) * height;
-
-            if (i === 0) ctx.moveTo(x, y);
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // 4. Create a clean translucent bottom gradient shade layout fill
-        ctx.lineTo((cpuHistory.length - 1) / (MAX_HISTORY_POINTS - 1) * width, height);
-        ctx.lineTo(0, height);
-        ctx.fillStyle = 'rgba(88, 166, 255, 0.07)';
-        ctx.fill();
-    }
-    // --- COLUMN SCHEMA TREE GENERATOR (PILLAR 4) ---
-    async function refreshSchemaTree() {
-        const container = document.getElementById('schema-tree-container');
-        container.innerHTML = "<span style='color: #8b949e;'>Harvesting catalog...</span>";
-
-        try {
-            // 🎯 Step 1: Query the dropdown element first to initialize the state!
-            const envSelector = document.getElementById('env-selector');
-            const selectedEnv = envSelector ? envSelector.value : 'Development';
-
-            // 🎯 Step 2: Now safely read the variable token to map the target C-Core database file!
-            const activeDb = selectedEnv === 'Production' ? 'prod_lightbase.sovereign.db' :
-                selectedEnv === 'Staging' ? 'staging_lightbase.db' : 'test_lightbase.db';
-
-            console.log(`[Studio UI] Dispatching schema metadata request for target mapping: ${activeDb}`);
-
-            // Step 3: Fire the binary routing signal to our Python gateway socket
-            const res = await fetch(`${API_BASE}/query`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "get_schema_tree",
-                    db_path: activeDb
-                })
-            });
-
-            const data = await res.json();
-            container.innerHTML = ""; // Clear the placeholder slot
-
-            if (!data.tables || data.tables.length === 0) {
-                container.innerHTML = "<span style='color: #f85149;'>No tables found in catalog.</span>";
-                return;
-            }
-
-            // Loop through the catalog layout returned by libcore.so
-            data.tables.forEach(table => {
-                const tableElement = document.createElement('div');
-                tableElement.style.margin = "4px 0";
-
-                tableElement.innerHTML = `
-                <div class="tree-node" style="cursor: pointer; color: #58a6ff; font-weight: bold; padding: 2px;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'block' : 'none'">
-                    ▼ 📊 table: <span style="color: #e3b341;">${table.name}</span>
-                </div>
-                <div class="tree-children" style="padding-left: 18px; margin-top: 2px;">
-                    ${table.columns.map(col => `<div class="column-leaf" style="color: #8b949e; padding: 1px;">🔹 ${col}</div>`).join('')}
-                </div>
-            `;
-                container.appendChild(tableElement);
-            });
-        } catch (err) {
-            container.innerHTML = `<span style='color: #f85149;'>Visualizer Error: ${err.message || err}</span>`;
-        }
-    }
-
-    // --- ARENA-POWERED REQUEST LEDGER BOOKMARK MANAGER ---
-    async function saveCurrentRequestToLedger() {
-        const nameInput = document.getElementById('collection-name-input');
-        const bookmarkName = nameInput.value.trim();
-        const targetHost = document.getElementById('api-endpoint').value.trim();
-        
-        if (!bookmarkName || !targetHost) {
-            alert("Please specify a bookmark name and a target URL destination first!");
-            return;
-        }
-        
-        try {
-            const activeDb = currentEnv === 'Production' ? 'prod_lightbase.sovereign.db' : 
-                             currentEnv === 'Staging' ? 'staging_lightbase.db' : 'test_lightbase.db';
-
-            // Pack the entire structural target framework state into a mini SQL statement script!
-            // We will generate a raw script batch insertion string and pipe it straight down our active query arena lane!
-            const insertQuery = `
-                CREATE TABLE IF NOT EXISTS system_collections (id INTEGER PRIMARY KEY, name TEXT, method TEXT, url TEXT);
-                INSERT INTO system_collections (name, method, url) VALUES ("${bookmarkName}", "${activeMethod}", "${targetHost}");
-            `;
-
-            const res = await fetch("http://localhost:8000/query", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "execute_query",
-                    db_path: activeDb,
-                    query: insertQuery
-                })
-            });
-            
-            await res.json();
-            nameInput.value = ""; // Clear out bookmark name input field layout
-            
-            // 🔥 CHAIN REACTION: Instantly update your sidebars to reflect the freshly added item records!
-            await refreshSchemaTree();
-            await loadSavedCollectionsFromMetal();
-            
-        } catch (err) {
-            console.error("[Studio UI Error] Failed to commit request bookmark down local disk tracks:", err);
-        }
-    }
-
-    // Function to fetch and display the saved collections from the database
-    async function loadSavedCollectionsFromMetal() {
-        const container = document.getElementById('collections-list-container');
-        
-        try {
-            const activeDb = currentEnv === 'Production' ? 'prod_lightbase.sovereign.db' : 
-                             currentEnv === 'Staging' ? 'staging_lightbase.db' : 'test_lightbase.db';
-
-            const res = await fetch("http://localhost:8000/query", {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    target: "execute_query",
-                    db_path: activeDb,
-                    query: "SELECT name, method, url FROM system_collections ORDER BY id DESC;"
-                })
-            });
-            
-            const data = await res.json();
-            container.innerHTML = ""; // Clear current visual items list
-            
-            // Handle parsing if rows exist inside database tables
-            if (!data.db_data || !data.db_data.rows || data.db_data.rows.length === 0) {
-                container.innerHTML = "<span style='color: #8b949e; font-style: italic;'>No saved bookmarks found.</span>";
-                return;
-            }
-
-            // Dynamically append your saved bookmark nodes right onto the sidebar list view!
-            data.db_data.rows.forEach(row => {
-                const item = document.createElement('div');
-                item.className = 'tree-item';
-                item.style.fontSize = '12px';
-                item.style.padding = '4px 8px';
-                item.innerHTML = `<span style="color: #56d364; font-weight: bold; width: 45px; display: inline-block;">${row.method}</span> ${row.name}`;
-                item.title = row.url;
-                item.onclick = () => {
-                    document.getElementById('api-endpoint').value = row.url;
-                    selectNetworkMethod(row.method);
-                };
-                container.appendChild(item);
-            });
-        } catch (err) {
-            container.innerHTML = `<span style='color: #f85149;'>Ledger Fault: ${err.message || err}</span>`;
-        }
-    }
-
-    // Auto-initialize loops
-    setInterval(pollSystemMetrics, 2000);
-    pollSystemMetrics();
-    setTimeout(() => {
-        refreshDatabaseSchema();
-        refreshSchemaTree();
-        loadSavedCollectionsFromMetal();
-    }, 1000); // Wait for boot and scan catalog
-</script>
+<script src="app.js"></script>
+<script src="features.js"></script>
 </body>
 </html>

@@ -1,2 +1,3 @@
 /home/aarav/LightBase/dist/lib/libcore.so
+/home/aarav/LightBase/dist/bin/lb-cli
 /home/aarav/LightBase/dist/include/engine.h

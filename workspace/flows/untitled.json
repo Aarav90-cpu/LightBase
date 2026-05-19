@@ -1,0 +1,13 @@
+{
+  "nodes": [
+    {
+      "id": "node_2",
+      "type": "request",
+      "method": "GET",
+      "url": "https://www.google.com/",
+      "condition": "",
+      "transform": "",
+      "prompt": ""
+    }
+  ]
+}

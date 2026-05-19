@@ -142,13 +142,133 @@ CMakeFiles/core.dir/src/storage.c.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/storage.c.s"
 	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/storage.c -o CMakeFiles/core.dir/src/storage.c.s
 
+CMakeFiles/core.dir/src/collections.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/collections.c.o: /home/aarav/LightBase/core/src/collections.c
+CMakeFiles/core.dir/src/collections.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building C object CMakeFiles/core.dir/src/collections.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/collections.c.o -MF CMakeFiles/core.dir/src/collections.c.o.d -o CMakeFiles/core.dir/src/collections.c.o -c /home/aarav/LightBase/core/src/collections.c
+
+CMakeFiles/core.dir/src/collections.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/collections.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/collections.c > CMakeFiles/core.dir/src/collections.c.i
+
+CMakeFiles/core.dir/src/collections.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/collections.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/collections.c -o CMakeFiles/core.dir/src/collections.c.s
+
+CMakeFiles/core.dir/src/assert_engine.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/assert_engine.c.o: /home/aarav/LightBase/core/src/assert_engine.c
+CMakeFiles/core.dir/src/assert_engine.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building C object CMakeFiles/core.dir/src/assert_engine.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/assert_engine.c.o -MF CMakeFiles/core.dir/src/assert_engine.c.o.d -o CMakeFiles/core.dir/src/assert_engine.c.o -c /home/aarav/LightBase/core/src/assert_engine.c
+
+CMakeFiles/core.dir/src/assert_engine.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/assert_engine.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/assert_engine.c > CMakeFiles/core.dir/src/assert_engine.c.i
+
+CMakeFiles/core.dir/src/assert_engine.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/assert_engine.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/assert_engine.c -o CMakeFiles/core.dir/src/assert_engine.c.s
+
+CMakeFiles/core.dir/src/database.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/database.c.o: /home/aarav/LightBase/core/src/database.c
+CMakeFiles/core.dir/src/database.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building C object CMakeFiles/core.dir/src/database.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/database.c.o -MF CMakeFiles/core.dir/src/database.c.o.d -o CMakeFiles/core.dir/src/database.c.o -c /home/aarav/LightBase/core/src/database.c
+
+CMakeFiles/core.dir/src/database.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/database.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/database.c > CMakeFiles/core.dir/src/database.c.i
+
+CMakeFiles/core.dir/src/database.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/database.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/database.c -o CMakeFiles/core.dir/src/database.c.s
+
+CMakeFiles/core.dir/src/thread_pool.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/thread_pool.c.o: /home/aarav/LightBase/core/src/thread_pool.c
+CMakeFiles/core.dir/src/thread_pool.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building C object CMakeFiles/core.dir/src/thread_pool.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/thread_pool.c.o -MF CMakeFiles/core.dir/src/thread_pool.c.o.d -o CMakeFiles/core.dir/src/thread_pool.c.o -c /home/aarav/LightBase/core/src/thread_pool.c
+
+CMakeFiles/core.dir/src/thread_pool.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/thread_pool.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/thread_pool.c > CMakeFiles/core.dir/src/thread_pool.c.i
+
+CMakeFiles/core.dir/src/thread_pool.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/thread_pool.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/thread_pool.c -o CMakeFiles/core.dir/src/thread_pool.c.s
+
+CMakeFiles/core.dir/src/schema_docs.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/schema_docs.c.o: /home/aarav/LightBase/core/src/schema_docs.c
+CMakeFiles/core.dir/src/schema_docs.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building C object CMakeFiles/core.dir/src/schema_docs.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/schema_docs.c.o -MF CMakeFiles/core.dir/src/schema_docs.c.o.d -o CMakeFiles/core.dir/src/schema_docs.c.o -c /home/aarav/LightBase/core/src/schema_docs.c
+
+CMakeFiles/core.dir/src/schema_docs.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/schema_docs.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/schema_docs.c > CMakeFiles/core.dir/src/schema_docs.c.i
+
+CMakeFiles/core.dir/src/schema_docs.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/schema_docs.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/schema_docs.c -o CMakeFiles/core.dir/src/schema_docs.c.s
+
+CMakeFiles/core.dir/src/git_sync.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/git_sync.c.o: /home/aarav/LightBase/core/src/git_sync.c
+CMakeFiles/core.dir/src/git_sync.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building C object CMakeFiles/core.dir/src/git_sync.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/git_sync.c.o -MF CMakeFiles/core.dir/src/git_sync.c.o.d -o CMakeFiles/core.dir/src/git_sync.c.o -c /home/aarav/LightBase/core/src/git_sync.c
+
+CMakeFiles/core.dir/src/git_sync.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/git_sync.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/git_sync.c > CMakeFiles/core.dir/src/git_sync.c.i
+
+CMakeFiles/core.dir/src/git_sync.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/git_sync.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/git_sync.c -o CMakeFiles/core.dir/src/git_sync.c.s
+
+CMakeFiles/core.dir/src/ai_core.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/ai_core.c.o: /home/aarav/LightBase/core/src/ai_core.c
+CMakeFiles/core.dir/src/ai_core.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Building C object CMakeFiles/core.dir/src/ai_core.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/ai_core.c.o -MF CMakeFiles/core.dir/src/ai_core.c.o.d -o CMakeFiles/core.dir/src/ai_core.c.o -c /home/aarav/LightBase/core/src/ai_core.c
+
+CMakeFiles/core.dir/src/ai_core.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/ai_core.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/ai_core.c > CMakeFiles/core.dir/src/ai_core.c.i
+
+CMakeFiles/core.dir/src/ai_core.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/ai_core.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/ai_core.c -o CMakeFiles/core.dir/src/ai_core.c.s
+
+CMakeFiles/core.dir/src/crypto_vault.c.o: CMakeFiles/core.dir/flags.make
+CMakeFiles/core.dir/src/crypto_vault.c.o: /home/aarav/LightBase/core/src/crypto_vault.c
+CMakeFiles/core.dir/src/crypto_vault.c.o: CMakeFiles/core.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_13) "Building C object CMakeFiles/core.dir/src/crypto_vault.c.o"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -MD -MT CMakeFiles/core.dir/src/crypto_vault.c.o -MF CMakeFiles/core.dir/src/crypto_vault.c.o.d -o CMakeFiles/core.dir/src/crypto_vault.c.o -c /home/aarav/LightBase/core/src/crypto_vault.c
+
+CMakeFiles/core.dir/src/crypto_vault.c.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing C source to CMakeFiles/core.dir/src/crypto_vault.c.i"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -E /home/aarav/LightBase/core/src/crypto_vault.c > CMakeFiles/core.dir/src/crypto_vault.c.i
+
+CMakeFiles/core.dir/src/crypto_vault.c.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling C source to assembly CMakeFiles/core.dir/src/crypto_vault.c.s"
+	/usr/bin/cc $(C_DEFINES) $(C_INCLUDES) $(C_FLAGS) -S /home/aarav/LightBase/core/src/crypto_vault.c -o CMakeFiles/core.dir/src/crypto_vault.c.s
+
 # Object files for target core
 core_OBJECTS = \
 "CMakeFiles/core.dir/src/engine.c.o" \
 "CMakeFiles/core.dir/src/arena.c.o" \
 "CMakeFiles/core.dir/src/sys_monitor.c.o" \
 "CMakeFiles/core.dir/src/tlv.c.o" \
-"CMakeFiles/core.dir/src/storage.c.o"
+"CMakeFiles/core.dir/src/storage.c.o" \
+"CMakeFiles/core.dir/src/collections.c.o" \
+"CMakeFiles/core.dir/src/assert_engine.c.o" \
+"CMakeFiles/core.dir/src/database.c.o" \
+"CMakeFiles/core.dir/src/thread_pool.c.o" \
+"CMakeFiles/core.dir/src/schema_docs.c.o" \
+"CMakeFiles/core.dir/src/git_sync.c.o" \
+"CMakeFiles/core.dir/src/ai_core.c.o" \
+"CMakeFiles/core.dir/src/crypto_vault.c.o"
 
 # External object files for target core
 core_EXTERNAL_OBJECTS =
@@ -158,10 +278,19 @@ libcore.so: CMakeFiles/core.dir/src/arena.c.o
 libcore.so: CMakeFiles/core.dir/src/sys_monitor.c.o
 libcore.so: CMakeFiles/core.dir/src/tlv.c.o
 libcore.so: CMakeFiles/core.dir/src/storage.c.o
+libcore.so: CMakeFiles/core.dir/src/collections.c.o
+libcore.so: CMakeFiles/core.dir/src/assert_engine.c.o
+libcore.so: CMakeFiles/core.dir/src/database.c.o
+libcore.so: CMakeFiles/core.dir/src/thread_pool.c.o
+libcore.so: CMakeFiles/core.dir/src/schema_docs.c.o
+libcore.so: CMakeFiles/core.dir/src/git_sync.c.o
+libcore.so: CMakeFiles/core.dir/src/ai_core.c.o
+libcore.so: CMakeFiles/core.dir/src/crypto_vault.c.o
 libcore.so: CMakeFiles/core.dir/build.make
 libcore.so: CMakeFiles/core.dir/compiler_depend.ts
+libcore.so: /usr/lib/quickjs/libquickjs.a
 libcore.so: CMakeFiles/core.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking C shared library libcore.so"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/home/aarav/LightBase/core/build_release/CMakeFiles --progress-num=$(CMAKE_PROGRESS_14) "Linking C shared library libcore.so"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/core.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

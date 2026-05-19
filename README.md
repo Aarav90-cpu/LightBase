@@ -1,111 +1,186 @@
-# 🚀 LightBase
+# ⚡ LightBase
 
-**Ultra-performance, bare-metal local development runtime bridge and persistence engine built for high-compute applications.**
+**A local-first, multi-protocol API development platform powered by a native C-Core engine.**
 
-LightBase decouples heavy disk and outbound network I/O into a standalone, multi-threaded C background daemon, communicating asynchronously with an API gateway over high-speed Linux Unix Domain Sockets (UDS).
+LightBase is a zero-cloud API development studio that combines a high-performance C backend with a Python gateway bridge and a sleek browser-based UI. Every request, collection, and environment is stored as plain JSON files you can version-control with Git — no accounts, no cloud sync, no telemetry.
 
 ---
 
-## 🏗️ Architecture Layout
+## ✨ Features
 
-LightBase eliminates high-level framework overhead, garbage collection cycles, and process-blocking runtime constraints by decoupling tasks into independent layer boundaries.
+| Feature | Description |
+|---------|-------------|
+| **Multi-Protocol API Studio** | REST, GraphQL, WebSocket, gRPC, MQTT — all in one tool |
+| **Native C-Core Engine** | OpenSSL TLS, arena memory allocators, multi-threaded IPC via Unix sockets |
+| **SQL Console** | Execute queries against local SQLite with sub-millisecond C-Core latency |
+| **Python Plugin System** | Write Python scripts with full PyPI access to process API responses |
+| **Visual Flow Builder** | Chain requests, conditions, transforms, and AI blocks into automated workflows |
+| **Live Data Streamer** | Real-time WebSocket and SSE streaming with message rate tracking |
+| **Crypto Vault** | AES-256-GCM encrypted API key storage at the C level |
+| **AI Companion** | Local llama.cpp inference for test generation, request chaining, and response explanations |
+| **Jupyter & Python Export** | One-click export of history or collections to `.ipynb` or `.py` |
+| **OpenAPI Generator** | Auto-generate OpenAPI 3.0 specs from saved collections |
+| **Stress Testing** | Burst-pattern load testing with real-time C-Core latency tracking |
+| **Monitors** | Scheduled collection runners for continuous API health checks |
+| **Environment Variables** | `{{variable}}` interpolation across URLs, headers, and bodies |
+| **Git-Versionable Workspace** | Everything in `workspace/` is plain JSON — just `git push` |
 
-```mermaid
-graph TD
-    UI[HTML5 Control Center UI] <--> PY[Python Gateway Bridge Server]
-    PY -- "Binary TLV Frame Stream (/tmp/lightbase.sock)" --> CORE[C-CORE ASYNC THREAD POOL]
-    
-    subgraph "C-CORE (libcore.so)"
-    CORE --> R1[Arena-Powered SQL Engine]
-    CORE --> R2[Stack-Isolated OpenSSL TLS]
-    CORE --> R3[Kernel /proc Ring Log Storage]
-    CORE --> R4[Database Catalog Scanner]
-    end
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
+│   Browser UI    │ ←→  │   Python Bridge       │ ←→  │   C-Core Engine      │
+│  (HTML/CSS/JS)  │HTTP │   (port 8000)         │ IPC │   (libcore.so)       │
+│                 │     │                        │ UDS │                      │
+│  • API Studio   │     │  • Route dispatcher    │     │  • OpenSSL TLS 1.3   │
+│  • SQL Console  │     │  • Plugin executor     │     │  • Arena allocators   │
+│  • Flow Builder │     │  • History logger      │     │  • Thread pool (8)    │
+│  • Dashboards   │     │  • Export engine        │     │  • mmap telemetry    │
+└─────────────────┘     └──────────────────────┘     └──────────────────────┘
+                               │                           │
+                         ┌─────┴──────┐              /tmp/lightbase.sock
+                         │ workspace/ │              (TLV binary protocol)
+                         │  (Git-able)│
+                         └────────────┘
 ```
 
 ### Layer Responsibilities
-*   **Frontend UI Layer**: A lightweight development client executing async network operations back and forth.
-*   **API Gateway Layer**: A zero-dependency Python routing engine acting as an IPC proxy gateway.
-*   **Native Systems Core**: A high-speed, bare-metal C shared engine processing dynamic allocations, filesystem transactions, and socket forging loops on detached POSIX background threads.
+
+- **Frontend UI** — Lightweight HTML/CSS/JS client with glassmorphism design, protocol tabs, and real-time dashboards
+- **Python Bridge** — Zero-dependency HTTP gateway (port 8000) that proxies requests to the C-Core over Unix Domain Sockets, runs Python plugins, manages filesystem storage, and handles exports
+- **C-Core (`libcore.so`)** — Multi-threaded native engine handling TLS networking, SQLite queries, telemetry logging, AES crypto, Git status, and AI inference via a binary TLV protocol over `/tmp/lightbase.sock`
 
 ---
 
-## 🚀 Core Studio Module Suite
-
-### 🌐 Module 1: Bare-Metal Environment Manager
-Tracks application environments (Development, Staging, and Production) dynamically inside isolated runtime boundaries.
-*   **Atomic Remapping Swaps**: Eliminates sluggish filesystem configuration lookups by pre-allocating an `EnvironmentBlock` structure directly within a dedicated `MemoryArena`. Context switches occur in under 1μs via thread-safe atomic pointer reassignments.
-*   **Fallback Safety Paths**: System state transitions are fully guarded against uninitialized pointer exceptions, ensuring backup file parameters handle initial transaction states safely.
-
-### 🧪 Module 2: Cryptographic API Testing Studio
-Provides bare-metal HTTP engine request assembly and transaction benchmarking.
-*   **Target Mu: Interactive Custom Header Grid Matrix**: A dynamic row-cloning grid matrix using pure vanilla DOM elements for high memory efficiency. Compiled custom auth keys or content typings are streamed directly down the Python-C pipeline.
-*   **Target Nu: Interactive JSON Request Body Payload Console Pane**: A high-capacity request payload text block area for building heavy-duty `POST` or `PUT` payloads.
-*   **Wire Packet Serialization**: Leverages stack-allocated sequence spaces to assemble raw wire payloads (GET, POST, PUT, DELETE) with exact specification alignment.
-*   **TLV Binary Protocol**: Encodes complex request structures using a sequential Type-Length-Value bit-shifting engine (Tags: 0x06 for Headers, 0x08 for Body Content).
-*   **Variable Resolution Engine**: Embedded Regex engines resolve environment tokens (e.g., `{{authToken}}`) dynamically on the fly before passing data to the core.
-*   **Memory Security**: Replaces vulnerable variable concatenation with explicit length-bounded tracking (`strncat`), preventing string overflows when importing large custom data tokens.
-
-### 🗄️ Module 3: Log-Structured Database Explorer
-Powers interactive sidebar schema catalog visualizers and data grids.
-*   **Catalog Data Harvesting**: Bypasses table-scanning bottlenecks by executing targeted schema scans directly against the internal engine catalog (`sqlite_master`).
-*   **Tele-Profiling**: Measures precise VM bytecode query times using high-resolution monotonic hardware timers (`clock_gettime`).
-
-### 🗄️ Append-Only Ring Buffer Telemetry Storage
-Ensures high-throughput execution tracking without destroying flash storage sectors.
-*   **Static File Sizing**: Pre-allocates a fixed array block file footprint on disk exactly once during system boot, guaranteeing predictable allocation.
-*   **Wrap-Around Bit Algebra**: Sequences incoming snapshots using sliding timestamp indexes. When the tracking pointer reaches limits (1024 slots), it wraps back to slot 0 instantly.
-
----
-
-## 📊 Performance Benchmarks
-
-LightBase delivers sub-millisecond core processing speeds by bypassing the local network routing stack:
-*   **Local Database Transaction**: `~990.20 μs` ($< 1\text{ ms}$ bare-metal execution)
-*   **Total IPC Roundtrip Gateway Latency**: `~1.203 ms` (Inclusive of Python decoding and HTTP transport)
-*   **Outbound HTTP Network Socket Request**: Variable based on distance, wrapped with microsecond-accurate tracking via `CLOCK_MONOTONIC`.
-
----
-
-## 🛠️ Compilation & Installation
+## 🚀 Quick Start
 
 ### Prerequisites
-Ensure your host machine runs a modern Linux kernel with `cmake`, `gcc`, and `uv`:
+
 ```bash
-sudo apt update && sudo apt install cmake build-essential
+# Build tools & dependencies
+sudo apt update && sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev
+
+# Python packages (optional, for WebSocket/MQTT/gRPC protocols)
+pip install websocket-client paho-mqtt grpcio grpcio-tools
 ```
 
-### 1. Build the Production Core Library
-LightBase employs an out-of-source CMake build pipeline with Link-Time Optimizations (`-O3 -march=native -flto -s`):
+### 1. Build the C-Core
+
 ```bash
 cd core
 mkdir -p build_release && cd build_release
-
-# Configure and build the target layout
 cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --target install
+make -j$(nproc)
 ```
 
-**Assets generated:**
-*   **Public Header**: `dist/include/engine.h`
-*   **Shared Binary**: `dist/lib/libcore.so`
+### 2. Start the Bridge Server
 
-### 2. Boot the Intermediary Python Gateway
 ```bash
-cd ../../bridge
-/usr/bin/uv run python python_bridge.py
+cd bridge
+python3 python_bridge.py
 ```
-The C-Core instantly carves out a high-speed memory socket at `/tmp/lightbase.sock` upon initialization.
+
+The C-Core initializes its thread pool, mmap telemetry log, and IPC socket automatically on boot:
+
+```
+[C-Core Pool] Asynchronous Interceptor Grid deployed with 8 active threads!
+[C-Core IPC] Pool Main Router listening at: /tmp/lightbase.sock 🎧
+[Bridge] LightBase API → http://localhost:8000 🚀
+```
+
+### 3. Open the UI
+
+Open `ui/index.html` in your browser, or serve it locally:
+
+```bash
+cd ui && python3 -m http.server 3000
+# → http://localhost:3000
+```
 
 ---
 
-## 🧠 Memory Design & Safety Assertions
+## 📂 Project Structure
 
-*   **Header Symbol Ordering**: Enforces a strict structure order: macro directives first, raw packed structural records second, and export function interfaces last to ensure top-down layout translation.
-*   **Translation Scope Reductions**: Centralizes cross-module variables within a shared master header file to keep dependencies clear.
-*   **Thread Race Protection**: Active server file descriptors pass explicitly into separate heap memory pools (`malloc`) at worker thread creation, isolating context pointers from stack invalidation faults.
+```
+LightBase/
+├── core/                   # Native C engine
+│   ├── include/            # Public headers (engine.h, storage.h, tlv.h)
+│   ├── src/                # Source files
+│   │   ├── engine.c        # HTTPS engine, IPC router, SQL executor
+│   │   ├── storage.c       # mmap telemetry, schema scanner, env manager
+│   │   ├── thread_pool.c   # 8-thread worker pool
+│   │   ├── crypto_vault.c  # AES-256-GCM key encryption
+│   │   ├── ai_core.c       # Local llama.cpp inference bridge
+│   │   └── ...
+│   └── build_release/      # Build artifacts (libcore.so)
+├── bridge/
+│   └── python_bridge.py    # HTTP gateway + plugin runner + export engine
+├── ui/
+│   ├── index.html          # Main application shell
+│   ├── app.js              # Core logic (requests, env, tabs, tests)
+│   ├── features.js         # Extended features (plugins, flows, AI, exports)
+│   └── style.css           # Glassmorphism design system
+├── workspace/              # 100% local, Git-versionable storage
+│   ├── collections/        # Saved API request configs
+│   ├── environments/       # Variable sets (dev/staging/prod)
+│   ├── plugins/            # Python plugin scripts
+│   ├── flows/              # Visual workflow definitions
+│   ├── history/            # Auto-logged request history
+│   ├── monitors/           # Scheduled run configs & results
+│   ├── exports/            # Generated .ipynb and .py files
+│   └── docs/               # Generated OpenAPI specs
+├── docs/
+│   └── user_guide.md       # Comprehensive user documentation
+└── dist/                   # Production distribution bundle
+```
+
+---
+
+## 📊 Performance
+
+LightBase delivers sub-millisecond core processing by bypassing the network stack entirely:
+
+| Operation | Latency |
+|-----------|---------|
+| Local SQLite query (via arena allocator) | **~750 µs** |
+| IPC roundtrip (Python ↔ C-Core) | **~1.2 ms** |
+| Outbound HTTPS (OpenSSL TLS 1.3) | Variable, with µs-precision `CLOCK_MONOTONIC` tracking |
+| Telemetry write (mmap ring buffer) | **< 10 µs** |
+
+---
+
+## 📖 Documentation
+
+For complete feature documentation, usage guides, and API reference:
+
+**→ [User Guide](docs/user_guide.md)**
+
+Covers all features including API Studio protocols, test scripts, visual flows, plugin system, AI workflows, exports, and CI/CD integration.
+
+---
+
+## 🛠️ CLI Usage
+
+Run headless requests without the UI:
+
+```bash
+# Via the included CLI script
+./bridge/lb-cli.sh httpbin.org /get GET
+
+# Or directly via curl
+curl -X POST http://localhost:8000/request \
+  -H "Content-Type: application/json" \
+  -d '{"method":"GET","hostname":"httpbin.org","path":"/get","headers":[]}'
+```
 
 ---
 
 ## 📄 License
-Licensed under `Apache License 2.0`
+
+Licensed under the [Apache License 2.0](LICENSE).
+
+---
+
+*Built with ⚡ — 100% local, zero cloud dependencies.*

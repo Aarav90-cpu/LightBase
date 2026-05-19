@@ -3,24 +3,15 @@
 
 #include <stdint.h>
 #include <time.h>
+#include "engine.h"
 
-#define EXPORT __attribute__((visibility("default")))
 #define MAX_STORAGE_RECORDS 1024
 #define STORAGE_FILE_PATH "lightbase_telemetry.log"
-#define TLV_TAG_API_VERB     0x08
-#define TLV_TAG_API_HEADERS  0x09
-#define TLV_TAG_API_BODY     0x0A
-#define BUFFER_SIZE 6144
+#define BUFFER_SIZE 262144
 
 // ============================================================================
 // 📦 1. BASE SYSTEM CORE DATA STRUCTURES (DECLARED FIRST)
 // ============================================================================
-
-// Simple structure to match our global C-core data responses
-typedef struct {
-    int status_code;
-    const char* payload;
-} Response;
 
 // Packed binary structural record layout (Exactly 32 Bytes - No Compiler Padding)
 typedef struct __attribute__((packed)) {
@@ -52,6 +43,6 @@ EXPORT Response scan_database_schema(const char* db_path);
 EXPORT Response load_studio_environment_state(const char* env_name, const char* db_path, uint32_t timeout, uint8_t sec_level);
 EXPORT Response execute_studio_api_request(const char* verb, const char* host, const char* path, const char* headers, const char* body);
 
-Response fetch_database_schema_tree(const char* db_path);
+EXPORT Response fetch_database_schema_tree(const char* db_path);
 
 #endif // LIGHTBASE_STORAGE_H

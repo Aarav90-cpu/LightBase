@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sqlite3.h>
+
 #define MMAP_FILE_SIZE (sizeof(TelemetryRecord) * MAX_STORAGE_RECORDS)
 
 extern uint32_t active_log_index;
@@ -16,7 +18,6 @@ EnvironmentBlock* current_runtime_env = NULL;
 MemoryArena* global_env_arena = NULL;
 TelemetryRecord* mmap_ring_buffer = NULL;
 int shared_log_fd = -1;
-extern uint32_t active_log_index;
 
 // Initialize our fixed binary loop runway cleanly on the filesystem
 int init_log_ring_buffer(void) {
@@ -66,7 +67,7 @@ int read_all_telemetry_records(TelemetryRecord* out_buffer, int max_records) {
     if (!file) return -1;
 
     fseek(file, 0, SEEK_SET);
-    int records_read = fread(out_buffer, sizeof(TelemetryRecord), max_records, file);
+    int records_read = (int)fread(out_buffer, sizeof(TelemetryRecord), max_records, file);
 
     fclose(file);
     return records_read;
@@ -79,35 +80,10 @@ EXPORT Response scan_database_schema(const char* db_path) {
     printf("[C-Core Storage] Scanning schema definitions for database: %s\n", db_path);
     Response res = {0, NULL};
 
-    // 1. Dynamically wire up our host's SQLite3 library hooks
-    void* sqlite_handle = dlopen("libsqlite3.so.0", RTLD_LAZY);
-    if (!sqlite_handle) sqlite_handle = dlopen("libsqlite3.so", RTLD_LAZY);
-
-    if (!sqlite_handle) {
+    sqlite3* db = NULL;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK) {
         res.status_code = 500;
-        res.payload = "{\"error\": \"SQLite3 library target binaries missing from host OS.\"}";
-        return res;
-    }
-
-    int (*sqlite3_open)(const char*, void**) = dlsym(sqlite_handle, "sqlite3_open");
-    int (*sqlite3_prepare_v2)(void*, const char*, int, void**, const char**) = dlsym(sqlite_handle, "sqlite3_prepare_v2");
-    int (*sqlite3_step)(void*) = dlsym(sqlite_handle, "sqlite3_step");
-    const unsigned char* (*sqlite3_column_text)(void*, int) = dlsym(sqlite_handle, "sqlite3_column_text");
-    int (*sqlite3_finalize)(void*) = dlsym(sqlite_handle, "sqlite3_finalize");
-    int (*sqlite3_close)(void*) = dlsym(sqlite_handle, "sqlite3_close");
-
-    if (!sqlite3_open || !sqlite3_prepare_v2 || !sqlite3_step || !sqlite3_column_text || !sqlite3_finalize || !sqlite3_close) {
-        dlclose(sqlite_handle);
-        res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to bind dynamic SQLite3 runtime symbol linkages.\"}";
-        return res;
-    }
-
-    void* db = NULL;
-    if (sqlite3_open(db_path, &db) != 0) {
-        dlclose(sqlite_handle);
-        res.status_code = 500;
-        res.payload = "{\"error\": \"Could not acquire system handle lock on target database.\"}";
+        res.payload = strdup("{\"error\": \"Could not acquire system handle lock on target database.\"}");
         return res;
     }
 
@@ -116,9 +92,8 @@ EXPORT Response scan_database_schema(const char* db_path) {
     MemoryArena* scan_arena = arena_init(scan_arena_size);
     if (!scan_arena) {
         sqlite3_close(db);
-        dlclose(sqlite_handle);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Out of memory panic during schema scanner arena instantiation.\"}";
+        res.payload = strdup("{\"error\": \"Out of memory panic during schema scanner arena instantiation.\"}");
         return res;
     }
 
@@ -129,13 +104,13 @@ EXPORT Response scan_database_schema(const char* db_path) {
     strcpy(views_json, "[");
 
     int table_count = 0, view_count = 0;
-    void* stmt = NULL;
+    sqlite3_stmt* stmt = NULL;
 
     // Target the sqlite_master system catalog directly to scan structures
     const char* schema_query = "SELECT type, name FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%';";
 
-    if (sqlite3_prepare_v2(db, schema_query, -1, &stmt, NULL) == 0) {
-        while (sqlite3_step(stmt) == 100) { // SQLITE_ROW = 100
+    if (sqlite3_prepare_v2(db, schema_query, -1, &stmt, NULL) == SQLITE_OK) {
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
             const unsigned char* type_txt = sqlite3_column_text(stmt, 0);
             const unsigned char* name_txt = sqlite3_column_text(stmt, 1);
 
@@ -174,13 +149,12 @@ EXPORT Response scan_database_schema(const char* db_path) {
         res.payload = dynamic_schema_payload;
     } else {
         res.status_code = 500;
-        res.payload = "{\"error\": \"Heap allocation fault for final schema JSON payload.\"}";
+        res.payload = strdup("{\"error\": \"Heap allocation fault for final schema JSON payload.\"}");
     }
 
     // Clean up all resources cleanly
     arena_destroy(scan_arena);
     sqlite3_close(db);
-    dlclose(sqlite_handle);
 
     return res;
 }
@@ -197,7 +171,7 @@ EXPORT Response load_studio_environment_state(const char* env_name, const char* 
         global_env_arena = arena_init(128 * 1024); // Allocate 128KB strictly for environment maps
         if (!global_env_arena) {
             res.status_code = 500;
-            res.payload = "{\"error\": \"Failed to allocate system environment mapping arena.\"}";
+            res.payload = strdup("{\"error\": \"Failed to allocate system environment mapping arena.\"}");
             return res;
         }
     }
@@ -206,7 +180,7 @@ EXPORT Response load_studio_environment_state(const char* env_name, const char* 
     EnvironmentBlock* new_config = (EnvironmentBlock*)arena_alloc(global_env_arena, sizeof(EnvironmentBlock));
     if (!new_config) {
         res.status_code = 500;
-        res.payload = "{\"error\": \"Environment manager arena capacity exhaustion fault.\"}";
+        res.payload = strdup("{\"error\": \"Environment manager arena capacity exhaustion fault.\"}");
         return res;
     }
 
@@ -328,25 +302,66 @@ EXPORT int init_mmap_telemetry_log(void) {
 // ============================================================================
 EXPORT Response fetch_database_schema_tree(const char* db_path) {
     printf("[C-Core Storage] Harvesting master schema catalog logs from: %s\n", db_path);
+    Response res = {0, NULL};
 
-    Response res;
-    // Pre-allocate a safe chunk of heap space from our runway tracking zone
-    char* json_buffer = (char*)malloc(8192);
-    if (!json_buffer) {
-        res.payload = "{\"error\": \"Out of memory allocation space\"}";
+    sqlite3* db = NULL;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK) {
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Could not open database.\"}");
         return res;
     }
 
-    // Initialize our base JSON payload layout string
-    strcpy(json_buffer, "{\"tables\": [");
+    const size_t json_capacity = 65536; // Increased capacity for complex schemas
+    char* json_buffer = malloc(json_capacity);
+    if (!json_buffer) {
+        sqlite3_close(db);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Out of memory.\"}");
+        return res;
+    }
+    memset(json_buffer, 0, json_capacity);
+    strncpy(json_buffer, "{\"tables\": [", json_capacity - 1);
 
-    // Execute a direct query against the hidden internal master table framework
-    // In a full implementation, you loop through sqlite3_prepare_v2 statements here
-    // For our active workspace mock compilation validation, we simulate the row structure:
-    strcat(json_buffer, "{\"name\": \"users\", \"columns\": [\"id (INTEGER)\", \"name (TEXT)\"]}");
+    sqlite3_stmt *table_stmt = NULL, *col_stmt = NULL;
+    const char* table_query = "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';";
+    int table_count = 0;
 
-    strcat(json_buffer, "]}");
+    if (sqlite3_prepare_v2(db, table_query, -1, &table_stmt, NULL) == SQLITE_OK) {
+        while (sqlite3_step(table_stmt) == SQLITE_ROW) {
+            if (table_count > 0) strncat(json_buffer, ",", json_capacity - strlen(json_buffer) - 1);
+            const char* table_name = (const char*)sqlite3_column_text(table_stmt, 0);
+            
+            char table_json[1024];
+            snprintf(table_json, sizeof(table_json), "{\"name\": \"%s\", \"columns\": [", table_name);
+            strncat(json_buffer, table_json, json_capacity - strlen(json_buffer) - 1);
 
+            char pragma_query[256];
+            snprintf(pragma_query, sizeof(pragma_query), "PRAGMA table_info(%s);", table_name);
+            int col_count = 0;
+
+            if (sqlite3_prepare_v2(db, pragma_query, -1, &col_stmt, NULL) == SQLITE_OK) {
+                while (sqlite3_step(col_stmt) == SQLITE_ROW) {
+                    if (col_count > 0) strncat(json_buffer, ",", json_capacity - strlen(json_buffer) - 1);
+                    const char* col_name = (const char*)sqlite3_column_text(col_stmt, 1);
+                    const char* col_type = (const char*)sqlite3_column_text(col_stmt, 2);
+                    
+                    char col_entry[512];
+                    snprintf(col_entry, sizeof(col_entry), "\"%s (%s)\"", col_name, col_type);
+                    strncat(json_buffer, col_entry, json_capacity - strlen(json_buffer) - 1);
+                    col_count++;
+                }
+                sqlite3_finalize(col_stmt);
+            }
+            strncat(json_buffer, "]}", json_capacity - strlen(json_buffer) - 1);
+            table_count++;
+        }
+        sqlite3_finalize(table_stmt);
+    }
+
+    strncat(json_buffer, "]}", json_capacity - strlen(json_buffer) - 1);
+    sqlite3_close(db);
+
+    res.status_code = 200;
     res.payload = json_buffer;
     return res;
 }

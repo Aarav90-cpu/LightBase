@@ -8,27 +8,33 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netdb.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sqlite3.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 #include "arena.h"
 #include "sys_monitor.h"
 #include "tlv.h"
 #include "storage.h"
+
 #define SOCKET_PATH "/tmp/lightbase.sock"
 
 uint32_t active_log_index = 0;
 
-// Native opaque structures matching OpenSSL signature frames
-typedef struct ssl_ctx_st SSL_CTX;
-typedef struct ssl_st SSL;
-typedef struct ssl_method_st SSL_METHOD;
-
 // Forward declaration of core execution routines
 EXPORT Response execute_local_db(const char* db_path, const char* sql_query);
-EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers);
+EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers, const char* body, const char* form_data);
+
+// 🎯 Forward declarations from collections.c
+int initialize_system_collections_ledger_table(sqlite3 *db);
+int insert_collection_record_to_arena(sqlite3 *db, const char *name, const char *method, const char *url);
+sqlite3 *open_arena_database_connection(const char *db_filename);
 
 // ============================================================================
-// 🌐 SECURE HTTPS ENGINE (OPENSSL DYNAMIC LINKING, SNI, & STACK-ISOLATED)
+// 🌐 SECURE HTTPS ENGINE (OPENSSL STATIC LINKING, SNI, & STACK-ISOLATED)
 // ============================================================================
-EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers) {
+EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers, const char* body, const char* form_data) {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
@@ -40,125 +46,133 @@ EXPORT Response fire_http_get(const char* method, const char* hostname, const ch
     printf("[C-Core] Preparing secure HTTPS TCP socket via OpenSSL for: %s %s%s\n", method, host_cursor, path);
     Response res = {0, NULL};
 
-    // Allocate thread-local container buffer to prevent cross-worker clobbering
+    SSL_CTX* ctx = SSL_CTX_new(TLS_client_method());
+    if (!ctx) {
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Failed to create SSL context.\"}");
+        return res;
+    }
+
+    SSL* ssl = SSL_new(ctx);
+    if (!ssl) {
+        SSL_CTX_free(ctx);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Failed to create SSL object.\"}");
+        return res;
+    }
+
+    // SNI support
+    SSL_set_tlsext_host_name(ssl, host_cursor);
+
+    struct hostent* server = gethostbyname(host_cursor);
+    if (!server) {
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"DNS resolution failed for target host.\"}");
+        return res;
+    }
+
+    int socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd < 0) {
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Failed to create TCP socket.\"}");
+        return res;
+    }
+
+    struct sockaddr_in serv_addr;
+    memset(&serv_addr, 0, sizeof(serv_addr));
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(443);
+    memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+
+    if (connect(socket_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+        close(socket_fd);
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"Socket connection to target port 443 failed.\"}");
+        return res;
+    }
+
+    SSL_set_fd(ssl, socket_fd);
+    if (SSL_connect(ssl) <= 0) {
+        close(socket_fd);
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
+        res.status_code = 500;
+        res.payload = strdup("{\"error\": \"SSL/TLS handshake failed with target host.\"}");
+        return res;
+    }
+
     char* local_network_buffer = malloc(BUFFER_SIZE);
     if (!local_network_buffer) {
+        close(socket_fd);
+        SSL_free(ssl);
+        SSL_CTX_free(ctx);
         res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Thread allocation failure for network channel.\"}");
+        res.payload = strdup("{\"error\": \"Memory allocation failed for network buffer.\"}");
         return res;
     }
     memset(local_network_buffer, 0, BUFFER_SIZE);
 
-    void* ssl_handle = dlopen("libssl.so.3", RTLD_LAZY);
-    if (!ssl_handle) ssl_handle = dlopen("libssl.so.1.1", RTLD_LAZY);
-    if (!ssl_handle) ssl_handle = dlopen("libssl.so", RTLD_LAZY);
+    char request[16384]; // Significantly increased to handle large bodies and headers safely
+    memset(request, 0, sizeof(request));
+    
+    // Determine the effective body and Content-Type
+    const char* final_body = (body && strlen(body) > 0) ? body : ((form_data && strlen(form_data) > 0) ? form_data : "");
+    const char* content_type = (body && strlen(body) > 0) ? "application/json" : ((form_data && strlen(form_data) > 0) ? "application/x-www-form-urlencoded" : NULL);
+    
+    int content_length = (int)strlen(final_body);
 
-    if (!ssl_handle) {
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Native OpenSSL shared library (libssl.so) not found on host OS.\"}");
-        return res;
-    }
-
-    const SSL_METHOD* (*OPENSSL_init_ssl)(void) = dlsym(ssl_handle, "TLS_client_method");
-    SSL_CTX* (*OPENSSL_ctx_new)(const SSL_METHOD*) = dlsym(ssl_handle, "SSL_CTX_new");
-    SSL* (*OPENSSL_new)(SSL_CTX*) = dlsym(ssl_handle, "SSL_new");
-    int (*OPENSSL_set_fd)(SSL*, int) = dlsym(ssl_handle, "SSL_set_fd");
-    int (*OPENSSL_connect)(SSL*) = dlsym(ssl_handle, "SSL_connect");
-    int (*OPENSSL_write)(SSL*, const void*, int) = dlsym(ssl_handle, "SSL_write");
-    int (*OPENSSL_read)(SSL*, void*, int) = dlsym(ssl_handle, "SSL_read");
-    void (*OPENSSL_free)(SSL*) = dlsym(ssl_handle, "SSL_free");
-    void (*OPENSSL_ctx_free)(SSL_CTX*) = dlsym(ssl_handle, "SSL_CTX_free");
-    long (*OPENSSL_ctrl)(SSL*, int, long, void*) = dlsym(ssl_handle, "SSL_ctrl");
-
-    if (!OPENSSL_init_ssl || !OPENSSL_ctx_new || !OPENSSL_new || !OPENSSL_set_fd ||
-        !OPENSSL_connect || !OPENSSL_write || !OPENSSL_read || !OPENSSL_free || !OPENSSL_ctx_free ||
-        !OPENSSL_ctrl) {
-        dlclose(ssl_handle);
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Failed to resolve cryptographic OpenSSL runtime symbols.\"}");
-        return res;
-    }
-
-    struct addrinfo hints, *server_info;
-    int socket_fd;
-
-    memset(&hints, 0, sizeof(hints));
-    hints.ai_family = AF_INET;
-    hints.ai_socktype = SOCK_STREAM;
-
-    if (getaddrinfo(host_cursor, "443", &hints, &server_info) != 0) {
-        dlclose(ssl_handle);
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Hostname resolution failed.\"}");
-        return res;
-    }
-
-    socket_fd = socket(server_info->ai_family, server_info->ai_socktype, server_info->ai_protocol);
-    if (socket_fd < 0) {
-        freeaddrinfo(server_info);
-        dlclose(ssl_handle);
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Failed to create base socket descriptor.\"}");
-        return res;
-    }
-
-    if (connect(socket_fd, server_info->ai_addr, server_info->ai_addrlen) < 0) {
-        close(socket_fd);
-        freeaddrinfo(server_info);
-        dlclose(ssl_handle);
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"Secure TCP connection handshake failed.\"}");
-        return res;
-    }
-    freeaddrinfo(server_info);
-
-    const SSL_METHOD* ssl_method = OPENSSL_init_ssl();
-    SSL_CTX* ctx = OPENSSL_ctx_new(ssl_method);
-    SSL* ssl = OPENSSL_new(ctx);
-
-    OPENSSL_set_fd(ssl, socket_fd);
-    OPENSSL_ctrl(ssl, 55, 0, (void*)host_cursor); // SSL_CTRL_SET_TLSEXT_HOSTNAME = 55
-
-    if (OPENSSL_connect(ssl) <= 0) {
-        OPENSSL_free(ssl);
-        OPENSSL_ctx_free(ctx);
-        close(socket_fd);
-        dlclose(ssl_handle);
-        free(local_network_buffer);
-        res.status_code = 500;
-        res.payload = strdup("{\"error\": \"TLS cryptographic handshake negotiation failed.\"}");
-        return res;
-    }
-
-    char request[2048];
     snprintf(request, sizeof(request),
              "%s %s HTTP/1.1\r\n"
              "Host: %s\r\n"
              "User-Agent: LightBaseEngine/1.0\r\n"
-             "Accept: application/json\r\n"
-             "%s"
-             "Connection: close\r\n\r\n",
-             method, path, host_cursor, (headers && strlen(headers) > 0) ? headers : "");
+             "Accept: application/json\r\n",
+             method, path, host_cursor);
 
-    OPENSSL_write(ssl, request, strlen(request));
+    if (content_type) {
+        char ct_line[128];
+        snprintf(ct_line, sizeof(ct_line), "Content-Type: %s\r\n", content_type);
+        strncat(request, ct_line, sizeof(request) - strlen(request) - 1);
+    }
+    
+    if (content_length > 0) {
+        char cl_line[64];
+        snprintf(cl_line, sizeof(cl_line), "Content-Length: %d\r\n", content_length);
+        strncat(request, cl_line, sizeof(request) - strlen(request) - 1);
+    }
+
+    if (headers && strlen(headers) > 0) {
+        strncat(request, headers, sizeof(request) - strlen(request) - 1);
+        // Ensure headers block ends with a newline if it doesn't already
+        if (request[strlen(request)-1] != '\n') {
+            strncat(request, "\r\n", sizeof(request) - strlen(request) - 1);
+        }
+    }
+
+    strncat(request, "Connection: close\r\n\r\n", sizeof(request) - strlen(request) - 1);
+    
+    if (content_length > 0) {
+        strncat(request, final_body, sizeof(request) - strlen(request) - 1);
+    }
+
+    SSL_write(ssl, request, strlen(request));
 
     int total_bytes_received = 0;
     int bytes_received;
 
-    while ((bytes_received = OPENSSL_read(ssl, local_network_buffer + total_bytes_received, BUFFER_SIZE - total_bytes_received - 1)) > 0) {
+    while ((bytes_received = SSL_read(ssl, local_network_buffer + total_bytes_received, BUFFER_SIZE - total_bytes_received - 1)) > 0) {
         total_bytes_received += bytes_received;
         if (total_bytes_received >= BUFFER_SIZE - 1) break;
     }
 
-    OPENSSL_free(ssl);
-    OPENSSL_ctx_free(ctx); // Typo case fix locked in!
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
     close(socket_fd);
-    dlclose(ssl_handle);
 
     char* json_body = strstr(local_network_buffer, "\r\n\r\n");
 
@@ -172,8 +186,9 @@ EXPORT Response fire_http_get(const char* method, const char* hostname, const ch
     if (json_body != NULL) {
         json_body += 4;
 
-        char* dynamic_response_wrapper = malloc(BUFFER_SIZE);
-        snprintf(dynamic_response_wrapper, BUFFER_SIZE,
+        size_t payload_len = strlen(json_body);
+        char* dynamic_response_wrapper = malloc(payload_len + 256);
+        snprintf(dynamic_response_wrapper, payload_len + 256,
                  "{"
                  "\"network_payload\": %s,"
                  "\"c_core_duration_us\": %.2f"
@@ -202,49 +217,23 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
     printf("[C-Core] Dynamic opening database via Arena Allocations: %s\n", db_path);
     Response res = {0, NULL};
 
-    void* sqlite_handle = dlopen("libsqlite3.so.0", RTLD_LAZY);
-    if (!sqlite_handle) sqlite_handle = dlopen("libsqlite3.so", RTLD_LAZY);
-
-    if (!sqlite_handle) {
+    sqlite3* db = NULL;
+    if (sqlite3_open(db_path, &db) != SQLITE_OK) {
         res.status_code = 500;
-        res.payload = "{\"error\": \"SQLite3 shared library target binary missing from host OS.\"}";
+        res.payload = strdup("{\"error\": \"Failed to instantiate internal file database locks.\"}");
         return res;
     }
 
-    int (*sqlite3_open)(const char*, void**) = dlsym(sqlite_handle, "sqlite3_open");
-    int (*sqlite3_prepare_v2)(void*, const char*, int, void**, const char**) = dlsym(sqlite_handle, "sqlite3_prepare_v2");
-    int (*sqlite3_step)(void*) = dlsym(sqlite_handle, "sqlite3_step");
-    int (*sqlite3_column_count)(void*) = dlsym(sqlite_handle, "sqlite3_column_count");
-    const char* (*sqlite3_column_name)(void*, int) = dlsym(sqlite_handle, "sqlite3_column_name");
-    const unsigned char* (*sqlite3_column_text)(void*, int) = dlsym(sqlite_handle, "sqlite3_column_text");
-    int (*sqlite3_finalize)(void*) = dlsym(sqlite_handle, "sqlite3_finalize");
-    int (*sqlite3_close)(void*) = dlsym(sqlite_handle, "sqlite3_close");
-    const char* (*sqlite3_errmsg)(void*) = dlsym(sqlite_handle, "sqlite3_errmsg");
-
-    if (!sqlite3_open || !sqlite3_prepare_v2 || !sqlite3_step || !sqlite3_column_count ||
-        !sqlite3_column_name || !sqlite3_column_text || !sqlite3_finalize || !sqlite3_close || !sqlite3_errmsg) {
-        dlclose(sqlite_handle);
-        res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to resolve Prepared Statement SQLite3 function symbols.\"}";
-        return res;
-    }
-
-    void* db = NULL;
-    if (sqlite3_open(db_path, &db) != 0) {
-        dlclose(sqlite_handle);
-        res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to instantiate internal file database locks.\"}";
-        return res;
-    }
+    // 🎯 Ensure system tables exist
+    initialize_system_collections_ledger_table(db);
 
     // Initialize custom arena: slice out a continuous 4MB pool runway instantly
     size_t arena_size = 4 * 1024 * 1024;
     MemoryArena* local_arena = arena_init(arena_size);
     if (!local_arena) {
         sqlite3_close(db);
-        dlclose(sqlite_handle);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to allocate bare-metal Memory Arena pool.\"}";
+        res.payload = strdup("{\"error\": \"Failed to allocate bare-metal Memory Arena pool.\"}");
         return res;
     }
 
@@ -255,21 +244,18 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
 
     const char* sql_leftover = sql_query;
     const char* pzTail = NULL;
-    void* stmt = NULL;
+    sqlite3_stmt* stmt = NULL;
 
     // Core Bytecode Compiling Loop leveraging pzTail addresses
     while (sql_leftover && strlen(sql_leftover) > 0) {
-        if (sqlite3_prepare_v2(db, sql_leftover, -1, &stmt, &pzTail) != 0) {
+        if (sqlite3_prepare_v2(db, sql_leftover, -1, &stmt, &pzTail) != SQLITE_OK) {
             char error_payload[512];
             snprintf(error_payload, sizeof(error_payload), "{\"error\": \"SQL Compilation Fault: %s\"}", sqlite3_errmsg(db));
             sqlite3_close(db);
-            dlclose(sqlite_handle);
             arena_destroy(local_arena);
 
-            char* err_wrapper = malloc(512);
-            strcpy(err_wrapper, error_payload);
             res.status_code = 500;
-            res.payload = err_wrapper;
+            res.payload = strdup(error_payload);
             return res;
         }
 
@@ -278,7 +264,7 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
             continue;
         }
 
-        while (sqlite3_step(stmt) == 100) { // SQLITE_ROW = 100
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
             char row_buffer[512] = {0};
             strcat(row_buffer, "{");
 
@@ -296,26 +282,24 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
             }
             strcat(row_buffer, "},");
 
-            int current_len = strlen(dynamic_json_heap);
-            int incoming_len = strlen(row_buffer);
+            size_t current_len = strlen(dynamic_json_heap);
+            size_t incoming_len = strlen(row_buffer);
 
             // Arena Offset Array Scaling Pass
             if (current_len + incoming_len + 5 >= json_capacity) {
-                size_t old_capacity = json_capacity;
                 json_capacity *= 2;
 
                 char* expanded_json = (char*)arena_alloc(local_arena, json_capacity);
                 if (!expanded_json) {
                     sqlite3_finalize(stmt);
                     sqlite3_close(db);
-                    dlclose(sqlite_handle);
                     arena_destroy(local_arena);
                     res.status_code = 500;
-                    res.payload = "{\"error\": \"Custom Arena pool capacity exhaustion tracking fault.\"}";
+                    res.payload = strdup("{\"error\": \"Custom Arena pool capacity exhaustion tracking fault.\"}");
                     return res;
                 }
 
-                memcpy(expanded_json, dynamic_json_heap, old_capacity);
+                memcpy(expanded_json, dynamic_json_heap, current_len + 1);
                 dynamic_json_heap = expanded_json;
             }
 
@@ -327,7 +311,7 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
         sql_leftover = pzTail; // Advance our tracking bookmark offset cleanly
     }
 
-    int final_len = strlen(dynamic_json_heap);
+    int final_len = (int)strlen(dynamic_json_heap);
     if (row_count > 0 && dynamic_json_heap[final_len - 1] == ',') {
         dynamic_json_heap[final_len - 1] = '\0';
     }
@@ -350,20 +334,19 @@ EXPORT Response execute_local_db(const char* db_path, const char* sql_query) {
 
     arena_destroy(local_arena); // Wipe out all temporary slices in one flash
     sqlite3_close(db);
-    dlclose(sqlite_handle);
 
     res.status_code = 200;
     res.payload = dynamic_db_response;
     return res;
 }
 
+// Forward declaration of the thread pool enqueue function
+int enqueue_intercepted_route_task(int client_fd);
+
 // ============================================================================
 // 🎧 MULTI-THREADED ASYNC WORKER THREAD POOL ENGINE (TLV DECODER UPGRADE)
 // ============================================================================
-void* handle_client_connection_pool(void* arg) {
-    int client_fd = *(int*)arg;
-    free(arg);
-
+void process_client_request_isolated(int client_fd) {
     uint8_t inbound_binary_packet[2048] = {0};
     ssize_t bytes_read = recv(client_fd, inbound_binary_packet, sizeof(inbound_binary_packet), 0);
 
@@ -390,7 +373,7 @@ void* handle_client_connection_pool(void* arg) {
                 // (Keep your existing character sanitization and execute_local_db calls exactly the same, passing final_db_target!)
                 char sanitized_query[1024] = {0};
                 int j = 0;
-                for (int i = 0; packet.query[i] != '\0' && i < sizeof(packet.query) - 1; i++) {
+                for (int i = 0; packet.query[i] != '\0' && (size_t)i < sizeof(packet.query) - 1; i++) {
                     if (packet.query[i] == '\\' && packet.query[i + 1] == 'n') { sanitized_query[j++] = ' '; i++; }
                     else if (packet.query[i] == '\r' || packet.query[i] == '\n' || packet.query[i] == '\t') { sanitized_query[j++] = ' '; }
                     else { sanitized_query[j++] = packet.query[i]; }
@@ -405,7 +388,7 @@ void* handle_client_connection_pool(void* arg) {
             // ROUTE 2: Asynchronous Secure Network Target
             else if (strcmp(packet.target, "network") == 0) {
                 printf("[C-Core TLV Worker] Binary Network Target Hit. Host: %s, Method: %s\n", packet.hostname, strlen(packet.method) > 0 ? packet.method : "GET");
-                Response net_res = fire_http_get(strlen(packet.method) > 0 ? packet.method : "GET", packet.hostname, packet.path, packet.headers);
+                Response net_res = fire_http_get(strlen(packet.method) > 0 ? packet.method : "GET", packet.hostname, packet.path, packet.headers, packet.body, packet.form_data);
                 send(client_fd, net_res.payload, strlen(net_res.payload), 0);
                 free((void*)net_res.payload);
             }
@@ -418,7 +401,8 @@ void* handle_client_connection_pool(void* arg) {
                 uint32_t avail_mem_mb = (uint32_t)(machine.avail_mem_kb / 1024); // Typo struct name aligned!
 
                 // Write snapshot record to raw disk sectors in single digit microseconds
-                int active_slot = append_mmap_telemetry_record((float)machine.cpu_usage_percentage, total_mem_mb, avail_mem_mb);                printf("[C-Core Storage Router] Logged hardware snapshot to Ring Buffer index slot: %d\n", active_slot);
+                int active_slot = append_mmap_telemetry_record((float)machine.cpu_usage_percentage, total_mem_mb, avail_mem_mb);
+                printf("[C-Core Storage Router] Logged hardware snapshot to Ring Buffer index slot: %d\n", active_slot);
 
                 char thread_local_buffer[2048] = {0};
                 snprintf(thread_local_buffer, sizeof(thread_local_buffer),
@@ -461,11 +445,11 @@ void* handle_client_connection_pool(void* arg) {
 
                 // 1. Asynchronously execute the raw wire-packet formatting engine
                 // packet.query holds the HTTP Verb if packet.method is empty
-                Response studio_wire = execute_studio_api_request(final_method, packet.hostname, packet.path, NULL, NULL);
+                Response studio_wire = execute_studio_api_request(final_method, packet.hostname, packet.path, packet.headers, packet.body);
                 printf("[C-Core API Studio] Wire formatting layout verified. Initializing transmission stream...\n");
 
                 // 2. Fire the formatted payload straight through our stack-isolated OpenSSL TLS network runner
-                Response live_network_res = fire_http_get(final_method, packet.hostname, packet.path, packet.headers);
+                Response live_network_res = fire_http_get(final_method, packet.hostname, packet.path, packet.headers, packet.body, packet.form_data);
 
                 // Stream the live returned payload straight back down to our WebStorm frontend data grids
                 send(client_fd, live_network_res.payload, strlen(live_network_res.payload), 0);
@@ -488,6 +472,21 @@ void* handle_client_connection_pool(void* arg) {
                 free((void*)schema_res.payload);
             }
 
+            else if (strcmp(packet.target, "save_collection") == 0) {
+                printf("[C-Core TLV Worker] Saving collection: %s\n", packet.query);
+                sqlite3* db = NULL;
+                if (sqlite3_open(packet.db_path, &db) == SQLITE_OK) {
+                    initialize_system_collections_ledger_table(db);
+                    insert_collection_record_to_arena(db, packet.query, packet.method, packet.hostname);
+                    sqlite3_close(db);
+                    const char* ok = "{\"status\": \"SAVED\"}";
+                    send(client_fd, ok, strlen(ok), 0);
+                } else {
+                    const char* err = "{\"error\": \"Failed to open database for saving collection.\"}";
+                    send(client_fd, err, strlen(err), 0);
+                }
+            }
+
             else {
                 const char* err = "{\"error\": \"Unknown binary packet target identifier.\"}";
                 send(client_fd, err, strlen(err), 0);
@@ -504,7 +503,6 @@ void* handle_client_connection_pool(void* arg) {
         }
     }
     close(client_fd);
-    return NULL;
 }
 
 // Main Acceptor Loop dispatching file descriptors to separate threads
@@ -519,14 +517,7 @@ void* ipc_listener_bootstrap_loop(void* arg) {
         int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
         if (client_fd < 0) continue;
 
-        int* worker_fd = malloc(sizeof(int));
-        *worker_fd = client_fd;
-
-        pthread_t worker_tid;
-        if (pthread_create(&worker_tid, NULL, handle_client_connection_pool, worker_fd) == 0) {
-            pthread_detach(worker_tid);
-        } else {
-            free(worker_fd);
+        if (enqueue_intercepted_route_task(client_fd) != 0) {
             close(client_fd);
         }
     }

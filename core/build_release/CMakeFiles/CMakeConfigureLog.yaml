@@ -20,6 +20,7 @@ events:
     names:
       - "uname"
     candidate_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/usr/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
@@ -36,9 +37,12 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/"
       - "/home/aarav/.platformio/penv/bin/"
       - "/bin/"
+    searched_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/uname"
     found: "/usr/bin/uname"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -83,6 +87,7 @@ events:
       - "make"
       - "smake"
     candidate_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/usr/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
@@ -99,6 +104,7 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/"
       - "/home/aarav/.platformio/penv/bin/"
     searched_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/gmake"
       - "/usr/bin/gmake"
       - "/home/aarav/.local/bin/gmake"
       - "/usr/lib/jvm/java-21-openjdk/bin/gmake"
@@ -114,9 +120,11 @@ events:
       - "/usr/bin/core_perl/gmake"
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/gmake"
       - "/home/aarav/.platformio/penv/bin/gmake"
+      - "/home/aarav/LightBase/bridge/.venv/bin/make"
     found: "/usr/bin/make"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -159,6 +167,7 @@ events:
       - "icx"
       - "clang"
     candidate_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/usr/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
@@ -174,9 +183,12 @@ events:
       - "/usr/bin/core_perl/"
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/"
       - "/home/aarav/.platformio/penv/bin/"
+    searched_directories:
+      - "/home/aarav/LightBase/bridge/.venv/bin/cc"
     found: "/usr/bin/cc"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -220,6 +232,7 @@ events:
     found: "/usr/share/cmake/Modules/CMakeCCompilerId.c.in"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -279,6 +292,7 @@ events:
       - "ar"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -296,6 +310,7 @@ events:
     found: "/usr/bin/ar"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -333,6 +348,7 @@ events:
       - "ranlib"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -350,6 +366,7 @@ events:
     found: "/usr/bin/ranlib"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -387,6 +404,7 @@ events:
       - "strip"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -404,6 +422,7 @@ events:
     found: "/usr/bin/strip"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -441,6 +460,7 @@ events:
       - "ld"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -458,6 +478,7 @@ events:
     found: "/usr/bin/ld"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -495,6 +516,7 @@ events:
       - "nm"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -512,6 +534,7 @@ events:
     found: "/usr/bin/nm"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -549,6 +572,7 @@ events:
       - "objdump"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -566,6 +590,7 @@ events:
     found: "/usr/bin/objdump"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -603,6 +628,7 @@ events:
       - "objcopy"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -620,6 +646,7 @@ events:
     found: "/usr/bin/objcopy"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -657,6 +684,7 @@ events:
       - "readelf"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -674,6 +702,7 @@ events:
     found: "/usr/bin/readelf"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -711,6 +740,7 @@ events:
       - "dlltool"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -727,6 +757,7 @@ events:
       - "/home/aarav/.platformio/penv/bin/"
     searched_directories:
       - "/usr/bin/dlltool"
+      - "/home/aarav/LightBase/bridge/.venv/bin/dlltool"
       - "/home/aarav/.local/bin/dlltool"
       - "/usr/lib/jvm/java-21-openjdk/bin/dlltool"
       - "/usr/local/bin/dlltool"
@@ -744,6 +775,7 @@ events:
     found: false
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -781,6 +813,7 @@ events:
       - "addr2line"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -798,6 +831,7 @@ events:
     found: "/usr/bin/addr2line"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -835,6 +869,7 @@ events:
       - "tapi"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -851,6 +886,7 @@ events:
       - "/home/aarav/.platformio/penv/bin/"
     searched_directories:
       - "/usr/bin/tapi"
+      - "/home/aarav/LightBase/bridge/.venv/bin/tapi"
       - "/home/aarav/.local/bin/tapi"
       - "/usr/lib/jvm/java-21-openjdk/bin/tapi"
       - "/usr/local/bin/tapi"
@@ -868,6 +904,7 @@ events:
     found: false
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -908,6 +945,7 @@ events:
       - "gcc-ar"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -924,6 +962,7 @@ events:
       - "/home/aarav/.platformio/penv/bin/"
     searched_directories:
       - "/usr/bin/gcc-ar-16.1"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ar-16.1"
       - "/home/aarav/.local/bin/gcc-ar-16.1"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ar-16.1"
       - "/usr/local/bin/gcc-ar-16.1"
@@ -939,6 +978,7 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/gcc-ar-16.1"
       - "/home/aarav/.platformio/penv/bin/gcc-ar-16.1"
       - "/usr/bin/gcc-ar-16"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ar-16"
       - "/home/aarav/.local/bin/gcc-ar-16"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ar-16"
       - "/usr/local/bin/gcc-ar-16"
@@ -954,6 +994,7 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/gcc-ar-16"
       - "/home/aarav/.platformio/penv/bin/gcc-ar-16"
       - "/usr/bin/gcc-ar16"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ar16"
       - "/home/aarav/.local/bin/gcc-ar16"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ar16"
       - "/usr/local/bin/gcc-ar16"
@@ -971,6 +1012,7 @@ events:
     found: "/usr/bin/gcc-ar"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -1011,6 +1053,7 @@ events:
       - "gcc-ranlib"
     candidate_directories:
       - "/usr/bin/"
+      - "/home/aarav/LightBase/bridge/.venv/bin/"
       - "/home/aarav/.local/bin/"
       - "/usr/lib/jvm/java-21-openjdk/bin/"
       - "/usr/local/bin/"
@@ -1027,6 +1070,7 @@ events:
       - "/home/aarav/.platformio/penv/bin/"
     searched_directories:
       - "/usr/bin/gcc-ranlib-16.1"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ranlib-16.1"
       - "/home/aarav/.local/bin/gcc-ranlib-16.1"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ranlib-16.1"
       - "/usr/local/bin/gcc-ranlib-16.1"
@@ -1042,6 +1086,7 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/gcc-ranlib-16.1"
       - "/home/aarav/.platformio/penv/bin/gcc-ranlib-16.1"
       - "/usr/bin/gcc-ranlib-16"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ranlib-16"
       - "/home/aarav/.local/bin/gcc-ranlib-16"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ranlib-16"
       - "/usr/local/bin/gcc-ranlib-16"
@@ -1057,6 +1102,7 @@ events:
       - "/home/aarav/.local/share/JetBrains/Toolbox/scripts/gcc-ranlib-16"
       - "/home/aarav/.platformio/penv/bin/gcc-ranlib-16"
       - "/usr/bin/gcc-ranlib16"
+      - "/home/aarav/LightBase/bridge/.venv/bin/gcc-ranlib16"
       - "/home/aarav/.local/bin/gcc-ranlib16"
       - "/usr/lib/jvm/java-21-openjdk/bin/gcc-ranlib16"
       - "/usr/local/bin/gcc-ranlib16"
@@ -1074,6 +1120,7 @@ events:
     found: "/usr/bin/gcc-ranlib"
     search_context:
       ENV{PATH}:
+        - "/home/aarav/LightBase/bridge/.venv/bin"
         - "/usr/bin"
         - "/home/aarav/.local/bin"
         - "/usr/lib/jvm/java-21-openjdk/bin"
@@ -1099,8 +1146,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx"
-      binary: "/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx"
+      source: "/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk"
+      binary: "/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk"
     cmakeVariables:
       CMAKE_C_FLAGS: ""
       CMAKE_C_FLAGS_DEBUG: "-g"
@@ -1109,13 +1156,13 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx'
+        Change Dir: '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk'
         
-        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_68581/fast
-        /usr/bin/make  -f CMakeFiles/cmTC_68581.dir/build.make CMakeFiles/cmTC_68581.dir/build
-        make[1]: Entering directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx'
-        Building C object CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o
-        /usr/bin/cc   -v -o CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_5f7fd/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_5f7fd.dir/build.make CMakeFiles/cmTC_5f7fd.dir/build
+        make[1]: Entering directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk'
+        Building C object CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o
+        /usr/bin/cc   -v -o CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c
         Using built-in specs.
         COLLECT_GCC=/usr/bin/cc
         Target: x86_64-pc-linux-gnu
@@ -1123,8 +1170,8 @@ events:
         Thread model: posix
         Supported LTO compression algorithms: zlib zstd
         gcc version 16.1.1 20260430 (GCC) 
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_68581.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccKnJMFD.s
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/'
+         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_5f7fd.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccW3memE.s
         GNU C23 (GCC) version 16.1.1 20260430 (x86_64-pc-linux-gnu)
         	compiled by GNU C version 16.1.1 20260430, GMP version 6.3.0, MPFR version 4.2.2, MPC version 1.4.1, isl version isl-0.27-GMP
         
@@ -1138,14 +1185,14 @@ events:
          /usr/include
         End of search list.
         Compiler executable checksum: d640c2d0cc84ebd71ee43ed7e2df63fb
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/'
-         as -v --64 -o CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o /tmp/ccKnJMFD.s
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/'
+         as -v --64 -o CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o /tmp/ccW3memE.s
         GNU assembler version 2.46.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.46.0
         COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
         LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.'
-        Linking C executable cmTC_68581
-        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_68581.dir/link.txt --verbose=1
+        COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.'
+        Linking C executable cmTC_5f7fd
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5f7fd.dir/link.txt --verbose=1
         Using built-in specs.
         COLLECT_GCC=/usr/bin/cc
         COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper
@@ -1156,14 +1203,14 @@ events:
         gcc version 16.1.1 20260430 (GCC) 
         COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
         LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_68581' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_68581.'
-         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccEpUofh.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_68581 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_5f7fd' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_5f7fd.'
+         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/cciVXPBX.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_5f7fd /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
         collect2 version 16.1.1 20260430
-        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccEpUofh.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_68581 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
+        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/cciVXPBX.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_5f7fd /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
         GNU ld (GNU Binutils) 2.46.0
-        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_68581' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_68581.'
-        /usr/bin/cc  -v -Wl,-v CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -o cmTC_68581
-        make[1]: Leaving directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx'
+        COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_5f7fd' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_5f7fd.'
+        /usr/bin/cc  -v -Wl,-v CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -o cmTC_5f7fd
+        make[1]: Leaving directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk'
         
       exitCode: 0
   -
@@ -1196,13 +1243,13 @@ events:
       Parsed C implicit link information:
         link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
         linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
-        ignore line: [Change Dir: '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx']
+        ignore line: [Change Dir: '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk']
         ignore line: []
-        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_68581/fast]
-        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_68581.dir/build.make CMakeFiles/cmTC_68581.dir/build]
-        ignore line: [make[1]: Entering directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-Qk5bJx']
-        ignore line: [Building C object CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o]
-        ignore line: [/usr/bin/cc   -v -o CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_5f7fd/fast]
+        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_5f7fd.dir/build.make CMakeFiles/cmTC_5f7fd.dir/build]
+        ignore line: [make[1]: Entering directory '/home/aarav/LightBase/core/build_release/CMakeFiles/CMakeScratch/TryCompile-DEKXzk']
+        ignore line: [Building C object CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/bin/cc   -v -o CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c]
         ignore line: [Using built-in specs.]
         ignore line: [COLLECT_GCC=/usr/bin/cc]
         ignore line: [Target: x86_64-pc-linux-gnu]
@@ -1210,8 +1257,8 @@ events:
         ignore line: [Thread model: posix]
         ignore line: [Supported LTO compression algorithms: zlib zstd]
         ignore line: [gcc version 16.1.1 20260430 (GCC) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/']
-        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_68581.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccKnJMFD.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/']
+        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_5f7fd.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -mtune=generic -march=x86-64 -version -o /tmp/ccW3memE.s]
         ignore line: [GNU C23 (GCC) version 16.1.1 20260430 (x86_64-pc-linux-gnu)]
         ignore line: [	compiled by GNU C version 16.1.1 20260430  GMP version 6.3.0  MPFR version 4.2.2  MPC version 1.4.1  isl version isl-0.27-GMP]
         ignore line: []
@@ -1225,14 +1272,14 @@ events:
         ignore line: [ /usr/include]
         ignore line: [End of search list.]
         ignore line: [Compiler executable checksum: d640c2d0cc84ebd71ee43ed7e2df63fb]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/']
-        ignore line: [ as -v --64 -o CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o /tmp/ccKnJMFD.s]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o /tmp/ccW3memE.s]
         ignore line: [GNU assembler version 2.46.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.46.0]
         ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
         ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.']
-        ignore line: [Linking C executable cmTC_68581]
-        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_68581.dir/link.txt --verbose=1]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o' '-c' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.']
+        ignore line: [Linking C executable cmTC_5f7fd]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5f7fd.dir/link.txt --verbose=1]
         ignore line: [Using built-in specs.]
         ignore line: [COLLECT_GCC=/usr/bin/cc]
         ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper]
@@ -1243,13 +1290,13 @@ events:
         ignore line: [gcc version 16.1.1 20260430 (GCC) ]
         ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
         ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_68581' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_68581.']
-        link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccEpUofh.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_68581 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
+        ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_5f7fd' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_5f7fd.']
+        link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/cciVXPBX.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_5f7fd /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2] ==> ignore
           arg [-plugin] ==> ignore
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so] ==> ignore
           arg [-plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/ccEpUofh.res] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/cciVXPBX.res] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
           arg [-plugin-opt=-pass-through=-lgcc_s_asneeded] ==> ignore
           arg [-plugin-opt=-pass-through=-latomic_asneeded] ==> ignore
@@ -1265,7 +1312,7 @@ events:
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
           arg [-pie] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_68581] ==> ignore
+          arg [cmTC_5f7fd] ==> ignore
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o]
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o]
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o]
@@ -1277,7 +1324,7 @@ events:
           arg [-L/lib] ==> dir [/lib]
           arg [-L/usr/lib] ==> dir [/usr/lib]
           arg [-v] ==> ignore
-          arg [CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o] ==> ignore
           arg [-lgcc] ==> lib [gcc]
           arg [-lgcc_s_asneeded] ==> lib [gcc_s_asneeded]
           arg [-latomic_asneeded] ==> lib [atomic_asneeded]
@@ -1287,7 +1334,7 @@ events:
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o]
           arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
         ignore line: [collect2 version 16.1.1 20260430]
-        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccEpUofh.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_68581 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_68581.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
+        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/cciVXPBX.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_5f7fd /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_5f7fd.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
         linker tool for 'C': /usr/bin/ld
         collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o] ==> [/usr/lib/Scrt1.o]
         collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o] ==> [/usr/lib/crti.o]

@@ -1,0 +1,40 @@
+# Build artifacts
+core/build_release/CMakeFiles/
+core/build_release/CMakeCache.txt
+core/build_release/cmake_install.cmake
+core/build_release/Makefile
+core/build_release/install_manifest.txt
+core/build_release/*.log
+core/build_release/lb-cli
+
+# Binary objects (keep libcore.so for distribution)
+*.o
+*.o.d
+
+# Runtime files
+lightbase_telemetry.log
+ui/lightbase_telemetry.log
+ui/test_lightbase.db
+*.db
+!workspace/**/*.db
+
+# IDE & editor
+.junie/
+ui/.junie/
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Workspace runtime data (keep structure, ignore generated data)
+workspace/exports/
+workspace/history/
+workspace/monitors/*_result_*.json

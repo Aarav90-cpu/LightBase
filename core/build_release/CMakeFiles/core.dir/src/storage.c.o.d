@@ -19,6 +19,7 @@ CMakeFiles/core.dir/src/storage.c.o: \
  /usr/include/bits/types/timer_t.h \
  /usr/include/bits/types/struct_itimerspec.h \
  /usr/include/bits/types/locale_t.h /usr/include/bits/types/__locale_t.h \
+ /home/aarav/LightBase/core/include/engine.h \
  /home/aarav/LightBase/core/include/arena.h /usr/include/stdio.h \
  /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include/stdarg.h \
  /usr/include/bits/types/__fpos_t.h /usr/include/bits/types/__mbstate_t.h \
@@ -50,4 +51,4 @@ CMakeFiles/core.dir/src/storage.c.o: \
  /usr/include/unistd.h /usr/include/bits/posix_opt.h \
  /usr/include/bits/environments.h /usr/include/bits/confname.h \
  /usr/include/bits/getopt_posix.h /usr/include/bits/getopt_core.h \
- /usr/include/bits/unistd_ext.h
+ /usr/include/bits/unistd_ext.h /usr/include/sqlite3.h

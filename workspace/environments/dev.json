@@ -1,0 +1,6 @@
+{
+  "name": "dev",
+  "variables": {
+    "baseUrl": "httpbin.org"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "nodes": [
+    {
+      "id": "n1",
+      "type": "request",
+      "method": "GET",
+      "url": "httpbin.org/get"
+    }
+  ]
+}
