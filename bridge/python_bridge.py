@@ -30,6 +30,11 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
+    def _set_cors_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
     # Helper routine to serialize fields into formal Type-Length-Value byte strings
     def encode_tlv_field(self, tag, value_str):
         value_bytes = value_str.encode('utf-8')
@@ -40,33 +45,51 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
 
     # --- ROUTE A: SECURE HTTPS NETWORK ENGINE OVER IPC ---
     def do_POST(self):
+        # --- UPDATE PATH: SECURE HTTPS NETWORK ENGINE WITH CUSTOM HEADERS ---
         if self.path == '/request':
-            content_length = int(self.headers['Content-Length'])
+            content_length = int(self.headers.get('Content-Length', 0))
             post_data = self.rfile.read(content_length).decode('utf-8')
             req_json = json.loads(post_data)
 
+            method = req_json.get("method", "GET")
             hostname = req_json.get("hostname", "jsonplaceholder.typicode.com")
             path = req_json.get("path", "/posts/1")
 
-            # Serialize fields into a single sequential binary frame stream block
+            print(f"[Python Gateway] Marshaling secure {method} request parameters for: {hostname}")
+
+            # Extract custom headers array sent by the browser grid view
+            custom_headers = req_json.get("headers", []) # Format: [{"key": "X-App", "value": "LightBase"}]
+            body_payload = req_json.get("body_payload", "") # Extract request body payload text
+
+            # Format custom headers into a single flat text stream line block
+            headers_payload = ""
+            for h in custom_headers:
+                if h.get("key") and h.get("value"):
+                    headers_payload += f"{h['key']}: {h['value']}\r\n"
+
+            # Serialize fields into our sequential binary frame stream block
+            # Tag 0x01=Type, Tag 0x04=Host, Tag 0x05=Path, Tag 0x06=Headers, Tag 0x07=Method, Tag 0x08=Body Content!
             tlv_frame = (
                     self.encode_tlv_field(0x01, "network") +
                     self.encode_tlv_field(0x04, hostname) +
-                    self.encode_tlv_field(0x05, path)
+                    self.encode_tlv_field(0x05, path) +
+                    self.encode_tlv_field(0x06, headers_payload) +
+                    self.encode_tlv_field(0x07, method) +
+                    self.encode_tlv_field(0x08, body_payload)
             )
 
             client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             client.connect("/tmp/lightbase.sock")
-            client.sendall(tlv_frame) # Throw raw unparsed bits over the socket runway track!
+            client.sendall(tlv_frame)
 
-            raw_response = client.recv(6144).decode('utf-8')
+            raw_response = client.recv(65536).decode('utf-8') # Increase read buffer descriptor for large sets
             client.close()
 
             response_json = json.loads(raw_response)
 
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
+            self._set_cors_headers()
             self.end_headers()
 
             output = {

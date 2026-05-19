@@ -39,7 +39,11 @@ Tracks application environments (Development, Staging, and Production) dynamical
 
 ### 🧪 Module 2: Cryptographic API Testing Studio
 Provides bare-metal HTTP engine request assembly and transaction benchmarking.
+*   **Target Mu: Interactive Custom Header Grid Matrix**: A dynamic row-cloning grid matrix using pure vanilla DOM elements for high memory efficiency. Compiled custom auth keys or content typings are streamed directly down the Python-C pipeline.
+*   **Target Nu: Interactive JSON Request Body Payload Console Pane**: A high-capacity request payload text block area for building heavy-duty `POST` or `PUT` payloads.
 *   **Wire Packet Serialization**: Leverages stack-allocated sequence spaces to assemble raw wire payloads (GET, POST, PUT, DELETE) with exact specification alignment.
+*   **TLV Binary Protocol**: Encodes complex request structures using a sequential Type-Length-Value bit-shifting engine (Tags: 0x06 for Headers, 0x08 for Body Content).
+*   **Variable Resolution Engine**: Embedded Regex engines resolve environment tokens (e.g., `{{authToken}}`) dynamically on the fly before passing data to the core.
 *   **Memory Security**: Replaces vulnerable variable concatenation with explicit length-bounded tracking (`strncat`), preventing string overflows when importing large custom data tokens.
 
 ### 🗄️ Module 3: Log-Structured Database Explorer

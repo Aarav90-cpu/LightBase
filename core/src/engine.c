@@ -14,7 +14,7 @@
 #include "storage.h"
 #define SOCKET_PATH "/tmp/lightbase.sock"
 
-// Ensure there are NO stray characters or trailing colons between these blocks!
+uint32_t active_log_index = 0;
 
 // Native opaque structures matching OpenSSL signature frames
 typedef struct ssl_ctx_st SSL_CTX;
@@ -23,23 +23,28 @@ typedef struct ssl_method_st SSL_METHOD;
 
 // Forward declaration of core execution routines
 EXPORT Response execute_local_db(const char* db_path, const char* sql_query);
-EXPORT Response fire_http_get(const char* hostname, const char* path);
+EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers);
 
 // ============================================================================
 // 🌐 SECURE HTTPS ENGINE (OPENSSL DYNAMIC LINKING, SNI, & STACK-ISOLATED)
 // ============================================================================
-EXPORT Response fire_http_get(const char* hostname, const char* path) {
+EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers) {
     struct timespec start, end;
     clock_gettime(CLOCK_MONOTONIC, &start);
 
-    printf("[C-Core] Preparing secure HTTPS TCP socket via OpenSSL for: %s%s\n", hostname, path);
+    // 🛡️ Safety cursor: strip any leading protocol if it leaked through the UI layer
+    const char* host_cursor = hostname;
+    if (strncmp(host_cursor, "https://", 8) == 0) host_cursor += 8;
+    else if (strncmp(host_cursor, "http://", 7) == 0) host_cursor += 7;
+
+    printf("[C-Core] Preparing secure HTTPS TCP socket via OpenSSL for: %s %s%s\n", method, host_cursor, path);
     Response res = {0, NULL};
 
     // Allocate thread-local container buffer to prevent cross-worker clobbering
     char* local_network_buffer = malloc(BUFFER_SIZE);
     if (!local_network_buffer) {
         res.status_code = 500;
-        res.payload = "{\"error\": \"Thread allocation failure for network channel.\"}";
+        res.payload = strdup("{\"error\": \"Thread allocation failure for network channel.\"}");
         return res;
     }
     memset(local_network_buffer, 0, BUFFER_SIZE);
@@ -51,7 +56,7 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
     if (!ssl_handle) {
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Native OpenSSL shared library (libssl.so) not found on host OS.\"}";
+        res.payload = strdup("{\"error\": \"Native OpenSSL shared library (libssl.so) not found on host OS.\"}");
         return res;
     }
 
@@ -72,7 +77,7 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
         dlclose(ssl_handle);
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to resolve cryptographic OpenSSL runtime symbols.\"}";
+        res.payload = strdup("{\"error\": \"Failed to resolve cryptographic OpenSSL runtime symbols.\"}");
         return res;
     }
 
@@ -83,11 +88,11 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    if (getaddrinfo(hostname, "443", &hints, &server_info) != 0) {
+    if (getaddrinfo(host_cursor, "443", &hints, &server_info) != 0) {
         dlclose(ssl_handle);
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Hostname resolution failed.\"}";
+        res.payload = strdup("{\"error\": \"Hostname resolution failed.\"}");
         return res;
     }
 
@@ -97,7 +102,7 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
         dlclose(ssl_handle);
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Failed to create base socket descriptor.\"}";
+        res.payload = strdup("{\"error\": \"Failed to create base socket descriptor.\"}");
         return res;
     }
 
@@ -107,17 +112,17 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
         dlclose(ssl_handle);
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"Secure TCP connection handshake failed.\"}";
+        res.payload = strdup("{\"error\": \"Secure TCP connection handshake failed.\"}");
         return res;
     }
     freeaddrinfo(server_info);
 
-    const SSL_METHOD* method = OPENSSL_init_ssl();
-    SSL_CTX* ctx = OPENSSL_ctx_new(method);
+    const SSL_METHOD* ssl_method = OPENSSL_init_ssl();
+    SSL_CTX* ctx = OPENSSL_ctx_new(ssl_method);
     SSL* ssl = OPENSSL_new(ctx);
 
     OPENSSL_set_fd(ssl, socket_fd);
-    OPENSSL_ctrl(ssl, 55, 0, (void*)hostname); // SSL_CTRL_SET_TLSEXT_HOSTNAME = 55
+    OPENSSL_ctrl(ssl, 55, 0, (void*)host_cursor); // SSL_CTRL_SET_TLSEXT_HOSTNAME = 55
 
     if (OPENSSL_connect(ssl) <= 0) {
         OPENSSL_free(ssl);
@@ -126,18 +131,19 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
         dlclose(ssl_handle);
         free(local_network_buffer);
         res.status_code = 500;
-        res.payload = "{\"error\": \"TLS cryptographic handshake negotiation failed.\"}";
+        res.payload = strdup("{\"error\": \"TLS cryptographic handshake negotiation failed.\"}");
         return res;
     }
 
-    char request[512];
+    char request[2048];
     snprintf(request, sizeof(request),
-             "GET %s HTTP/1.1\r\n"
+             "%s %s HTTP/1.1\r\n"
              "Host: %s\r\n"
              "User-Agent: LightBaseEngine/1.0\r\n"
              "Accept: application/json\r\n"
+             "%s"
              "Connection: close\r\n\r\n",
-             path, hostname);
+             method, path, host_cursor, (headers && strlen(headers) > 0) ? headers : "");
 
     OPENSSL_write(ssl, request, strlen(request));
 
@@ -180,7 +186,7 @@ EXPORT Response fire_http_get(const char* hostname, const char* path) {
     } else {
         free(local_network_buffer);
         res.status_code = 400;
-        res.payload = "{\"error\": \"Could not isolate HTTP body block from secure stream data.\"}";
+        res.payload = strdup("{\"error\": \"Could not isolate HTTP body block from secure stream data.\"}");
     }
 
     return res;
@@ -398,8 +404,8 @@ void* handle_client_connection_pool(void* arg) {
 
             // ROUTE 2: Asynchronous Secure Network Target
             else if (strcmp(packet.target, "network") == 0) {
-                printf("[C-Core TLV Worker] Binary Network Target Hit. Host: %s\n", packet.hostname);
-                Response net_res = fire_http_get(packet.hostname, packet.path);
+                printf("[C-Core TLV Worker] Binary Network Target Hit. Host: %s, Method: %s\n", packet.hostname, strlen(packet.method) > 0 ? packet.method : "GET");
+                Response net_res = fire_http_get(strlen(packet.method) > 0 ? packet.method : "GET", packet.hostname, packet.path, packet.headers);
                 send(client_fd, net_res.payload, strlen(net_res.payload), 0);
                 free((void*)net_res.payload);
             }
@@ -412,8 +418,7 @@ void* handle_client_connection_pool(void* arg) {
                 uint32_t avail_mem_mb = (uint32_t)(machine.avail_mem_kb / 1024); // Typo struct name aligned!
 
                 // Write snapshot record to raw disk sectors in single digit microseconds
-                int active_slot = append_telemetry_record((float)machine.cpu_usage_percentage, total_mem_mb, avail_mem_mb);
-                printf("[C-Core Storage Router] Logged hardware snapshot to Ring Buffer index slot: %d\n", active_slot);
+                int active_slot = append_mmap_telemetry_record((float)machine.cpu_usage_percentage, total_mem_mb, avail_mem_mb);                printf("[C-Core Storage Router] Logged hardware snapshot to Ring Buffer index slot: %d\n", active_slot);
 
                 char thread_local_buffer[2048] = {0};
                 snprintf(thread_local_buffer, sizeof(thread_local_buffer),
@@ -448,6 +453,39 @@ void* handle_client_connection_pool(void* arg) {
 
                 send(client_fd, env_res.payload, strlen(env_res.payload), 0);
                 free((void*)env_res.payload); // Cleanup the intermediate heap allocation string cleanly
+            }
+
+            else if (strcmp(packet.target, "api_studio_run") == 0) {
+                const char* final_method = strlen(packet.method) > 0 ? packet.method : (strlen(packet.query) > 0 ? packet.query : "GET");
+                printf("[C-Core TLV Worker] API Studio Request Runner Hit. Host: %s, Method: %s\n", packet.hostname, final_method);
+
+                // 1. Asynchronously execute the raw wire-packet formatting engine
+                // packet.query holds the HTTP Verb if packet.method is empty
+                Response studio_wire = execute_studio_api_request(final_method, packet.hostname, packet.path, NULL, NULL);
+                printf("[C-Core API Studio] Wire formatting layout verified. Initializing transmission stream...\n");
+
+                // 2. Fire the formatted payload straight through our stack-isolated OpenSSL TLS network runner
+                Response live_network_res = fire_http_get(final_method, packet.hostname, packet.path, packet.headers);
+
+                // Stream the live returned payload straight back down to our WebStorm frontend data grids
+                send(client_fd, live_network_res.payload, strlen(live_network_res.payload), 0);
+
+                // Clean up the intermediate heap string allocations immediately to prevent memory leaks
+                free((void*)studio_wire.payload);
+                free((void*)live_network_res.payload);
+            }
+
+            else if (strcmp(packet.target, "get_schema_tree") == 0) {
+                printf("[C-Core TLV Worker] Schema Visualizer Target Hit: %s\n", packet.db_path);
+
+                // Fire our metadata catalog harvesting engine
+                Response schema_res = fetch_database_schema_tree(packet.db_path);
+
+                // Stream the formatted structural JSON block back down the socket descriptor channel
+                send(client_fd, schema_res.payload, strlen(schema_res.payload), 0);
+
+                // Free the temporary heap allocation buffer layout immediately
+                free((void*)schema_res.payload);
             }
 
             else {
@@ -499,9 +537,9 @@ void* ipc_listener_bootstrap_loop(void* arg) {
 // Bootstrap initialization logic spawning the architecture on boot
 EXPORT int start_linux_ipc_bridge() {
     // Carve out and pre-allocate our fixed circular log-structured loop on disk
-    if (init_log_ring_buffer() != 0) {
-        printf("[C-Core Storage Error] Failed to initialize fixed-size ring-buffer log file on disk.\n");
-        return -1;
+    if (init_mmap_telemetry_log() != 0) {
+        printf("[C-Core Error] Critical fault mapping virtual telemetry pages onto space allocation.\n");
+        return -1; // 🎯 Returns a real failure signal to the orchestration thread!
     }
     printf("[C-Core Storage Engine] Log-Structured circular file mounted successfully at lightbase_telemetry.log\n");
 

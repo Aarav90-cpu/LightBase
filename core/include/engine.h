@@ -14,7 +14,7 @@ typedef struct {
 
 // 1. Ensure this is declared!
 EXPORT Response execute_raw_query(const char* query);
-EXPORT Response fire_http_get(const char* hostname, const char* path);
+EXPORT Response fire_http_get(const char* method, const char* hostname, const char* path, const char* headers);
 EXPORT Response execute_local_db(const char* db_path, const char* sql_query);
 EXPORT int start_linux_ipc_bridge();
 

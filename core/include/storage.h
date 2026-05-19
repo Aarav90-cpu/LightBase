@@ -44,12 +44,14 @@ typedef struct __attribute__((packed)) {
 // 🎧 2. EXPORTED ENGINE FUNCTION SIGNATURES (DECLARED SECOND)
 // ============================================================================
 
-int init_log_ring_buffer(void);
-int append_telemetry_record(float cpu, uint32_t total_mem, uint32_t avail_mem);
 int read_all_telemetry_records(TelemetryRecord* out_buffer, int max_records);
+int init_mmap_telemetry_log(void);
+int append_mmap_telemetry_record(float cpu, uint32_t total_mem, uint32_t avail_mem);
 
 EXPORT Response scan_database_schema(const char* db_path);
 EXPORT Response load_studio_environment_state(const char* env_name, const char* db_path, uint32_t timeout, uint8_t sec_level);
 EXPORT Response execute_studio_api_request(const char* verb, const char* host, const char* path, const char* headers, const char* body);
+
+Response fetch_database_schema_tree(const char* db_path);
 
 #endif // LIGHTBASE_STORAGE_H

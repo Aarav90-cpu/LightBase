@@ -10,7 +10,8 @@
 #define TLV_TAG_QUERY    0x03
 #define TLV_TAG_HOST     0x04
 #define TLV_TAG_PATH     0x05
-#define TLV_TAG_SCHEMA_SCAN 0x06
+#define TLV_TAG_HEADERS  0x06
+#define TLV_TAG_METHOD   0x07
 
 // Extracted Container Frame for Worker Routing
 typedef struct {
@@ -19,6 +20,8 @@ typedef struct {
     char query[1024];
     char hostname[256];
     char path[256];
+    char method[16];
+    char headers[1024];
 } TLVCommandPacket;
 
 // Protocol Extraction Function Interface Signature

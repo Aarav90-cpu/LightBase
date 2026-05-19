@@ -53,6 +53,18 @@ int parse_binary_tlv_frame(const uint8_t* stream, size_t stream_len, TLVCommandP
                     out_packet->path[length] = '\0';
                 }
                 break;
+            case TLV_TAG_HEADERS:
+                if (length < sizeof(out_packet->headers)) {
+                    memcpy(out_packet->headers, &stream[offset], length);
+                    out_packet->headers[length] = '\0';
+                }
+                break;
+            case TLV_TAG_METHOD:
+                if (length < sizeof(out_packet->method)) {
+                    memcpy(out_packet->method, &stream[offset], length);
+                    out_packet->method[length] = '\0';
+                }
+                break;
             default:
                 // Skip unknown tags dynamically to maintain backward compatibility
                 break;
