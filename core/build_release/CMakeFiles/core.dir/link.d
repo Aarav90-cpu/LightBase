@@ -14,6 +14,7 @@ libcore.so: \
   CMakeFiles/core.dir/src/git_sync.c.o \
   CMakeFiles/core.dir/src/ai_core.c.o \
   CMakeFiles/core.dir/src/git_watcher.c.o \
+  CMakeFiles/core.dir/src/security.c.o \
   CMakeFiles/core.dir/src/crypto_vault.c.o \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libssl.so \
   /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/libcrypto.so \
@@ -87,6 +88,8 @@ CMakeFiles/core.dir/src/git_sync.c.o:
 CMakeFiles/core.dir/src/ai_core.c.o:
 
 CMakeFiles/core.dir/src/git_watcher.c.o:
+
+CMakeFiles/core.dir/src/security.c.o:
 
 CMakeFiles/core.dir/src/crypto_vault.c.o:
 

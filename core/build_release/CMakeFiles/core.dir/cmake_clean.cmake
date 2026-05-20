@@ -20,6 +20,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/core.dir/src/git_watcher.c.o.d"
   "CMakeFiles/core.dir/src/schema_docs.c.o"
   "CMakeFiles/core.dir/src/schema_docs.c.o.d"
+  "CMakeFiles/core.dir/src/security.c.o"
+  "CMakeFiles/core.dir/src/security.c.o.d"
   "CMakeFiles/core.dir/src/storage.c.o"
   "CMakeFiles/core.dir/src/storage.c.o.d"
   "CMakeFiles/core.dir/src/sys_monitor.c.o"

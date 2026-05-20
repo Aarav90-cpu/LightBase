@@ -18,6 +18,7 @@ set(CMAKE_DEPENDS_DEPENDENCY_FILES
   "/home/aarav/LightBase/core/src/git_sync.c" "CMakeFiles/core.dir/src/git_sync.c.o" "gcc" "CMakeFiles/core.dir/src/git_sync.c.o.d"
   "/home/aarav/LightBase/core/src/git_watcher.c" "CMakeFiles/core.dir/src/git_watcher.c.o" "gcc" "CMakeFiles/core.dir/src/git_watcher.c.o.d"
   "/home/aarav/LightBase/core/src/schema_docs.c" "CMakeFiles/core.dir/src/schema_docs.c.o" "gcc" "CMakeFiles/core.dir/src/schema_docs.c.o.d"
+  "/home/aarav/LightBase/core/src/security.c" "CMakeFiles/core.dir/src/security.c.o" "gcc" "CMakeFiles/core.dir/src/security.c.o.d"
   "/home/aarav/LightBase/core/src/storage.c" "CMakeFiles/core.dir/src/storage.c.o" "gcc" "CMakeFiles/core.dir/src/storage.c.o.d"
   "/home/aarav/LightBase/core/src/sys_monitor.c" "CMakeFiles/core.dir/src/sys_monitor.c.o" "gcc" "CMakeFiles/core.dir/src/sys_monitor.c.o.d"
   "/home/aarav/LightBase/core/src/thread_pool.c" "CMakeFiles/core.dir/src/thread_pool.c.o" "gcc" "CMakeFiles/core.dir/src/thread_pool.c.o.d"

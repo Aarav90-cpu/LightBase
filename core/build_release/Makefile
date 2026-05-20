@@ -460,6 +460,30 @@ src/schema_docs.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/schema_docs.c.s
 .PHONY : src/schema_docs.c.s
 
+src/security.o: src/security.c.o
+.PHONY : src/security.o
+
+# target to build an object file
+src/security.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/security.c.o
+.PHONY : src/security.c.o
+
+src/security.i: src/security.c.i
+.PHONY : src/security.i
+
+# target to preprocess a source file
+src/security.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/security.c.i
+.PHONY : src/security.c.i
+
+src/security.s: src/security.c.s
+.PHONY : src/security.s
+
+# target to generate assembly for a file
+src/security.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/security.c.s
+.PHONY : src/security.c.s
+
 src/storage.o: src/storage.c.o
 .PHONY : src/storage.o
 
@@ -603,6 +627,9 @@ help:
 	@echo "... src/schema_docs.o"
 	@echo "... src/schema_docs.i"
 	@echo "... src/schema_docs.s"
+	@echo "... src/security.o"
+	@echo "... src/security.i"
+	@echo "... src/security.s"
 	@echo "... src/storage.o"
 	@echo "... src/storage.i"
 	@echo "... src/storage.s"

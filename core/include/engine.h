@@ -52,4 +52,18 @@ EXPORT int start_git_reactive_watcher(const char* repo_path);
 EXPORT char* poll_git_reactive_state(void);
 EXPORT void ack_git_reactive_event(void);
 
+// 10. Lock-Free Pool Telemetry
+void get_pool_telemetry(uint64_t *enqueued, uint64_t *processed, uint64_t *spins);
+
+// 11. Security Hardening Module
+EXPORT int security_init_hmac_key(void);
+EXPORT char* security_sign_request(const char* payload);
+EXPORT int security_verify_request(const char* payload, const char* hex_signature);
+EXPORT void secure_wipe(void* ptr, size_t len);
+EXPORT int security_validate_path(const char* path, const char* allowed_root);
+EXPORT int security_validate_sql(const char* sql);
+EXPORT int rate_limiter_check(const char* client_id);
+EXPORT double rate_limiter_remaining(const char* client_id);
+EXPORT char* security_status_report(void);
+
 #endif // ENGINE_H

@@ -47,6 +47,16 @@ def load_lightbase_core():
     lib.append_mmap_telemetry_record.argtypes = [ctypes.c_float, ctypes.c_uint32, ctypes.c_uint32]; lib.append_mmap_telemetry_record.restype = ctypes.c_int
     lib.load_studio_environment_state.argtypes = [ctypes.c_char_p]*2 + [ctypes.c_uint32, ctypes.c_uint8]; lib.load_studio_environment_state.restype = Response
     lib.execute_studio_api_request.argtypes = [ctypes.c_char_p]*5; lib.execute_studio_api_request.restype = Response
+    # Security module
+    lib.security_init_hmac_key.argtypes = []; lib.security_init_hmac_key.restype = ctypes.c_int
+    lib.security_sign_request.argtypes = [ctypes.c_char_p]; lib.security_sign_request.restype = ctypes.c_char_p
+    lib.security_verify_request.argtypes = [ctypes.c_char_p, ctypes.c_char_p]; lib.security_verify_request.restype = ctypes.c_int
+    lib.security_validate_path.argtypes = [ctypes.c_char_p, ctypes.c_char_p]; lib.security_validate_path.restype = ctypes.c_int
+    lib.security_validate_sql.argtypes = [ctypes.c_char_p]; lib.security_validate_sql.restype = ctypes.c_int
+    lib.rate_limiter_check.argtypes = [ctypes.c_char_p]; lib.rate_limiter_check.restype = ctypes.c_int
+    lib.rate_limiter_remaining.argtypes = [ctypes.c_char_p]; lib.rate_limiter_remaining.restype = ctypes.c_double
+    lib.security_status_report.argtypes = []; lib.security_status_report.restype = ctypes.c_char_p
+    lib.get_pool_telemetry.argtypes = [ctypes.POINTER(ctypes.c_uint64)]*3; lib.get_pool_telemetry.restype = None
     return lib
 
 lightbase = load_lightbase_core()
@@ -723,6 +733,44 @@ Example: {{"method":"GET","url":"https://api.example.com/users/123","body":"","e
                 with open(f"{WORKSPACE}/exports/{fname}",'w') as f: f.write("\n".join(lines))
                 self._json(200, {"engine_status":200,"filename":fname,"path":f"{WORKSPACE}/exports/{fname}"})
 
+            # ============ SECURITY ENDPOINTS ============
+            elif route == '/security/status':
+                raw = lightbase.security_status_report()
+                if raw:
+                    report = json.loads(raw.decode())
+                    # Add pool telemetry
+                    enq = ctypes.c_uint64(0); proc = ctypes.c_uint64(0); spins = ctypes.c_uint64(0)
+                    lightbase.get_pool_telemetry(ctypes.byref(enq), ctypes.byref(proc), ctypes.byref(spins))
+                    report["pool_telemetry"] = {"enqueued": enq.value, "processed": proc.value, "contention_spins": spins.value}
+                    self._json(200, {"engine_status": 200, "security": report})
+                else:
+                    self._err(500, "Security module not loaded")
+
+            elif route == '/security/sign':
+                payload = rj.get("payload", "")
+                sig = lightbase.security_sign_request(payload.encode())
+                if sig:
+                    self._json(200, {"engine_status": 200, "signature": sig.decode(), "payload_length": len(payload)})
+                else:
+                    self._err(500, "HMAC signing failed")
+
+            elif route == '/security/verify':
+                payload = rj.get("payload", "")
+                signature = rj.get("signature", "")
+                valid = lightbase.security_verify_request(payload.encode(), signature.encode())
+                self._json(200, {"engine_status": 200, "valid": bool(valid), "signature": signature[:16] + "..."})
+
+            elif route == '/security/validate_path':
+                path = rj.get("path", "")
+                root = rj.get("root", WORKSPACE)
+                safe = lightbase.security_validate_path(path.encode(), root.encode())
+                self._json(200, {"engine_status": 200, "safe": bool(safe), "path": path})
+
+            elif route == '/security/validate_sql':
+                sql = rj.get("sql", "")
+                safe = lightbase.security_validate_sql(sql.encode())
+                self._json(200, {"engine_status": 200, "safe": bool(safe)})
+
             else:
                 self._err(404, "Route not found")
         except Exception as e:
@@ -853,6 +901,10 @@ if __name__ == '__main__':
     lightbase.initialize_c_core_interceptor_pool()
     lightbase.start_linux_ipc_bridge()
     lightbase.init_mmap_telemetry_log()
+
+    # Initialize security module
+    lightbase.security_init_hmac_key()
+    print("[Bridge] \U0001f6e1\ufe0f Security module armed (HMAC + rate limiter + path guard + SQL sanitizer).")
 
     # Start the C-Core reactive git watcher (inotify on .git/HEAD)
     rc = lightbase.start_git_reactive_watcher(REPO_PATH.encode())

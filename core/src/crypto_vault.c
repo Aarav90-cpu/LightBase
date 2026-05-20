@@ -4,6 +4,9 @@
 #include <openssl/evp.h>
 #include <openssl/rand.h>
 
+// Forward declaration from security.c
+extern void secure_wipe(void* ptr, size_t len);
+
 // Standard hardware-aligned byte sizes
 #define AES_KEY_SIZE 32
 #define AES_IV_SIZE 12
@@ -42,12 +45,17 @@ char* encrypt_api_key_system_level(const char* plain_text_key) {
 
     // 2. Serialize structural token packet to raw Hex format (IV + TAG + CIPHERTEXT)
     char *hex_output = malloc((AES_IV_SIZE + AES_TAG_SIZE + ciphertext_len) * 2 + 1);
-    char *ptr = hex_output;
+    char *hex_ptr = hex_output;
 
-    for(int i=0; i<AES_IV_SIZE; i++) { sprintf(ptr, "%02x", iv[i]); ptr += 2; }
-    for(int i=0; i<AES_TAG_SIZE; i++) { sprintf(ptr, "%02x", tag[i]); ptr += 2; }
-    for(int i=0; i<ciphertext_len; i++) { sprintf(ptr, "%02x", ciphertext[i]); ptr += 2; }
-    *ptr = '\0';
+    for(int i=0; i<AES_IV_SIZE; i++) { sprintf(hex_ptr, "%02x", iv[i]); hex_ptr += 2; }
+    for(int i=0; i<AES_TAG_SIZE; i++) { sprintf(hex_ptr, "%02x", tag[i]); hex_ptr += 2; }
+    for(int i=0; i<ciphertext_len; i++) { sprintf(hex_ptr, "%02x", ciphertext[i]); hex_ptr += 2; }
+    *hex_ptr = '\0';
+
+    // 🛡️ Secure wipe: zero-fill sensitive intermediary buffers
+    secure_wipe(iv, AES_IV_SIZE);
+    secure_wipe(tag, AES_TAG_SIZE);
+    secure_wipe(ciphertext, sizeof(ciphertext));
 
     return hex_output;
 
@@ -103,11 +111,17 @@ char* decrypt_api_key_system_level(const char* hex_encoded_token) {
     plaintext[plaintext_len] = '\0';
 
     EVP_CIPHER_CTX_free(ctx);
+
+    // 🛡️ Secure wipe: zero-fill ciphertext and IV from stack/heap
+    secure_wipe(ciphertext, ciphertext_len);
+    secure_wipe(iv, AES_IV_SIZE);
+    secure_wipe(tag, AES_TAG_SIZE);
     free(ciphertext);
 
     // Return as a heap-allocated C string
     char *result = malloc(plaintext_len + 1);
     memcpy(result, plaintext, plaintext_len + 1);
+    secure_wipe(plaintext, ciphertext_len + 1);  // Wipe temporary plaintext
     free(plaintext);
     return result;
 
