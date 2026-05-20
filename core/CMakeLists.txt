@@ -32,6 +32,7 @@ add_library(core SHARED
         ${CMAKE_CURRENT_SOURCE_DIR}/src/schema_docs.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/git_sync.c
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ai_core.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/git_watcher.c
         src/crypto_vault.c
 )
 

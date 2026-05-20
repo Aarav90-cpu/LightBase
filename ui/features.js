@@ -52,11 +52,130 @@ function clearCookies(){for(const k in cookies)delete cookies[k];paintCookies();
 function paintCookies(){const el=$('cookie-list');const ks=Object.keys(cookies);if(!ks.length){el.innerHTML='<span class="text-muted">Empty</span>';return;}
 el.innerHTML=ks.map(k=>`<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--border)"><span class="text-muted">${k}:</span><span class="text-cyan" style="font-weight:600">${cookies[k]}</span></div>`).join('');}
 
-// === GIT ===
+// === GIT REACTIVE STATE ENGINE ===
+let gitSSE = null;
+let gitAIContext = null; // Branch-aware AI context
+
 async function pollGit(){const el=$('git-output');el.textContent='Syncing…';
 try{const res=await fetch(`${API}/git_sync`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({repo_path:'/home/aarav/LightBase'})});
 const data=await res.json();el.textContent=data.git_status||'No data';
 }catch(e){el.textContent=`Error: ${e.message}`;}}
+
+function initGitSSE() {
+    if (gitSSE) { gitSSE.close(); gitSSE = null; }
+
+    const dot = $('git-sse-dot');
+    const banner = $('git-reactive-banner');
+
+    gitSSE = new EventSource(`${API}/events`);
+
+    gitSSE.addEventListener('connected', () => {
+        if (dot) { dot.style.background = '#00e676'; dot.title = 'SSE connected'; }
+        console.log('[Git SSE] Connected to reactive event stream');
+        // Fetch initial state
+        fetch(`${API}/git_watch_state`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})})
+            .then(r => r.json())
+            .then(data => {
+                const s = data.git_reactive;
+                if (s && s.branch) {
+                    const bb = $('git-branch-badge');
+                    const sha = $('git-sha');
+                    if (bb) bb.textContent = '⎇ ' + s.branch;
+                    if (sha) sha.textContent = s.head_sha || '';
+                    const el = $('git-output');
+                    if (el) el.textContent = `Branch: ${s.branch}\nSHA: ${s.head_sha}\nStatus: watching`;
+                }
+            }).catch(() => {});
+    });
+
+    gitSSE.addEventListener('git_state', (e) => {
+        try {
+            const data = JSON.parse(e.data);
+            handleGitStateEvent(data);
+        } catch (err) {
+            console.error('[Git SSE] Parse error:', err);
+        }
+    });
+
+    gitSSE.onerror = () => {
+        if (dot) { dot.style.background = '#ff5252'; dot.title = 'SSE disconnected'; }
+        console.warn('[Git SSE] Connection lost, reconnecting in 5s...');
+    };
+}
+
+function handleGitStateEvent(data) {
+    const bb = $('git-branch-badge');
+    const sha = $('git-sha');
+    const banner = $('git-reactive-banner');
+    const el = $('git-output');
+
+    // Update branch badge and SHA
+    if (bb) bb.textContent = '⎇ ' + (data.branch || '—');
+    if (sha) sha.textContent = data.head_sha || '';
+
+    // Build status text
+    const lines = [`Event: ${data.event_type}`, `Branch: ${data.branch}`];
+    if (data.prev_branch && data.event_type === 'branch_switch') lines.push(`From: ${data.prev_branch}`);
+    lines.push(`SHA: ${data.head_sha}`);
+    lines.push(`Changed: ${data.changed_file_count} files`);
+    if (data.schema_changed) lines.push('⚡ Schema modified');
+    if (data.config_changed) lines.push('📂 Configs updated');
+    if (data.plugin_changed) lines.push('🐍 Plugins changed');
+    if (el) el.textContent = lines.join('\n');
+
+    // Show reactive banner for important events
+    if (banner && data.event_type !== 'init') {
+        let bannerText = '';
+        let bannerColor = '';
+
+        if (data.event_type === 'branch_switch') {
+            bannerText = `⚡ Branch switched: ${data.prev_branch} → ${data.branch}`;
+            bannerColor = 'linear-gradient(135deg, #1a237e, #0d47a1)';
+        } else if (data.event_type === 'head_update') {
+            bannerText = `🔄 HEAD updated on ${data.branch} (${data.head_sha})`;
+            bannerColor = 'linear-gradient(135deg, #1b5e20, #2e7d32)';
+        }
+
+        if (bannerText) {
+            banner.textContent = bannerText;
+            banner.style.background = bannerColor;
+            banner.style.color = '#fff';
+            banner.style.display = 'block';
+            // Auto-hide after 8 seconds
+            setTimeout(() => { banner.style.display = 'none'; }, 8000);
+        }
+    }
+
+    // === HOT-RELOAD ACTIONS ===
+    const actions = data.reload_actions || [];
+
+    if (actions.includes('schema_reload')) {
+        console.log('[Git Reactor] 🗄️ Hot-reloading schema tree...');
+        if (typeof refreshSchemaTree === 'function') refreshSchemaTree();
+    }
+
+    if (actions.includes('config_reload')) {
+        console.log('[Git Reactor] 📂 Hot-reloading collections & environments...');
+        if (typeof loadCollections === 'function') loadCollections();
+        if (typeof loadFlows === 'function') loadFlows();
+    }
+
+    if (actions.includes('plugin_reload')) {
+        console.log('[Git Reactor] 🐍 Hot-reloading plugin list...');
+        if (typeof loadPlugins === 'function') loadPlugins();
+    }
+
+    if (actions.includes('ai_context_update') && data.ai_context) {
+        console.log('[Git Reactor] 🤖 AI context updated for branch:', data.ai_context.active_branch);
+        gitAIContext = data.ai_context;
+    }
+
+    // Log all changed files in console for debugging
+    if (data.changed_files && data.changed_files.length > 0) {
+        console.log(`[Git Reactor] Changed files (${data.changed_file_count}):`, data.changed_files);
+    }
+}
+
 
 // === VAULT ===
 async function vaultEncrypt(){const key=$('vault-key').value.trim();const lbl=$('vault-status');if(!key)return;lbl.innerHTML='Encrypting…';
@@ -243,5 +362,5 @@ alert(`🐍 Python script exported!\n\nFile: ${data.filename}\nPath: ${data.path
 // BOOT SEQUENCE
 // ============================================================================
 setInterval(pollMetrics,2000);pollMetrics();
-setTimeout(()=>{refreshSchemaTree();loadCollections();pollGit();loadFlows();loadHistory();loadPlugins();},1000);
+setTimeout(()=>{refreshSchemaTree();loadCollections();pollGit();loadFlows();loadHistory();loadPlugins();initGitSSE();},1000);
 

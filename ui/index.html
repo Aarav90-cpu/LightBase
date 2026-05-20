@@ -45,10 +45,16 @@
             <div class="sb-title-row"><span>Cookies</span><button class="sb-action text-red" onclick="clearCookies()">Clear</button></div>
             <div id="cookie-list" class="sb-tree-area"><span class="text-muted">Empty</span></div>
         </div>
-        <!-- Git -->
+        <!-- Git Reactive State -->
         <div class="sb-section">
-            <div class="sb-title-row"><span>Git Sync</span><button class="sb-action" onclick="pollGit()">↻</button></div>
-            <pre id="git-output" class="sb-pre">Idle</pre>
+            <div class="sb-title-row"><span>🧠 Git State</span><button class="sb-action" onclick="pollGit()">↻</button></div>
+            <div id="git-reactive-banner" style="display:none;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-size:11px;font-weight:600;animation:fadeIn .3s ease"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+                <span id="git-branch-badge" style="background:var(--accent);color:#000;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">—</span>
+                <span id="git-sha" class="text-muted" style="font-size:10px;font-family:monospace">—</span>
+                <span id="git-sse-dot" style="width:8px;height:8px;border-radius:50%;background:#666;margin-left:auto" title="SSE disconnected"></span>
+            </div>
+            <pre id="git-output" class="sb-pre" style="max-height:80px;overflow-y:auto;font-size:10px">Connecting…</pre>
         </div>
         <!-- Vault -->
         <div class="sb-section">

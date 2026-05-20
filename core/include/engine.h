@@ -47,4 +47,9 @@ EXPORT char* decrypt_api_key_system_level(const char* hex_encoded_token);
 // 8. Collections Ledger
 EXPORT char* list_all_collections(const char* db_path);
 
+// 9. Reactive Git-State Interceptor Engine
+EXPORT int start_git_reactive_watcher(const char* repo_path);
+EXPORT char* poll_git_reactive_state(void);
+EXPORT void ack_git_reactive_event(void);
+
 #endif // ENGINE_H

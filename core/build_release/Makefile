@@ -388,6 +388,30 @@ src/git_sync.c.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/lb-cli.dir/build.make CMakeFiles/lb-cli.dir/src/git_sync.c.s
 .PHONY : src/git_sync.c.s
 
+src/git_watcher.o: src/git_watcher.c.o
+.PHONY : src/git_watcher.o
+
+# target to build an object file
+src/git_watcher.c.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_watcher.c.o
+.PHONY : src/git_watcher.c.o
+
+src/git_watcher.i: src/git_watcher.c.i
+.PHONY : src/git_watcher.i
+
+# target to preprocess a source file
+src/git_watcher.c.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_watcher.c.i
+.PHONY : src/git_watcher.c.i
+
+src/git_watcher.s: src/git_watcher.c.s
+.PHONY : src/git_watcher.s
+
+# target to generate assembly for a file
+src/git_watcher.c.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/core.dir/build.make CMakeFiles/core.dir/src/git_watcher.c.s
+.PHONY : src/git_watcher.c.s
+
 src/lb_cli.o: src/lb_cli.c.o
 .PHONY : src/lb_cli.o
 
@@ -570,6 +594,9 @@ help:
 	@echo "... src/git_sync.o"
 	@echo "... src/git_sync.i"
 	@echo "... src/git_sync.s"
+	@echo "... src/git_watcher.o"
+	@echo "... src/git_watcher.i"
+	@echo "... src/git_watcher.s"
 	@echo "... src/lb_cli.o"
 	@echo "... src/lb_cli.i"
 	@echo "... src/lb_cli.s"

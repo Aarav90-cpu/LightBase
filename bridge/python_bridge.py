@@ -1,9 +1,10 @@
-import json, socket, ctypes, os, sys, sqlite3, time, threading, glob, uuid, traceback, re
+import json, socket, ctypes, os, sys, sqlite3, time, threading, glob, uuid, traceback, re, queue
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
 
 WORKSPACE = "/home/aarav/LightBase/workspace"
-for d in ["collections","environments","history","monitors","mocks","flows","docs"]:
+REPO_PATH = "/home/aarav/LightBase"
+for d in ["collections","environments","history","monitors","mocks","flows","docs","exports","plugins"]:
     os.makedirs(f"{WORKSPACE}/{d}", exist_ok=True)
 
 # ============================================================================
@@ -33,6 +34,9 @@ def load_lightbase_core():
         ("initialize_c_core_interceptor_pool", [], ctypes.c_int),
         ("start_linux_ipc_bridge", [], ctypes.c_int),
         ("init_mmap_telemetry_log", [], ctypes.c_int),
+        ("start_git_reactive_watcher", [ctypes.c_char_p], ctypes.c_int),
+        ("poll_git_reactive_state", [], ctypes.c_char_p),
+        ("ack_git_reactive_event", [], None),
     ]:
         getattr(lib, fn).argtypes = at; getattr(lib, fn).restype = rt
     lib.scan_database_schema.argtypes = [ctypes.c_char_p]; lib.scan_database_schema.restype = Response
@@ -51,6 +55,9 @@ lightbase = load_lightbase_core()
 active_mocks = {}
 # Monitor threads
 monitor_threads = {}
+# SSE event subscribers (list of queue.Queue)
+sse_clients = []
+sse_clients_lock = threading.Lock()
 
 # ============================================================================
 # FILESYSTEM HELPERS
@@ -178,6 +185,41 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
         elif self.path.startswith('/fs/list/'):
             cat = self.path.split('/')[-1]
             self._json(200, {"files": fs_list(cat)})
+        elif self.path == '/events':
+            # SSE (Server-Sent Events) endpoint for real-time git state push
+            self.send_response(200)
+            self._cors()
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.end_headers()
+
+            client_queue = queue.Queue()
+            with sse_clients_lock:
+                sse_clients.append(client_queue)
+
+            try:
+                # Send initial connection event
+                self.wfile.write(b'event: connected\ndata: {"status":"ok"}\n\n')
+                self.wfile.flush()
+
+                while True:
+                    try:
+                        event = client_queue.get(timeout=15)
+                        event_type = event.get("type", "git_state")
+                        payload = json.dumps(event)
+                        self.wfile.write(f'event: {event_type}\ndata: {payload}\n\n'.encode())
+                        self.wfile.flush()
+                    except queue.Empty:
+                        # Send keepalive ping every 15s
+                        self.wfile.write(b': keepalive\n\n')
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                with sse_clients_lock:
+                    if client_queue in sse_clients:
+                        sse_clients.remove(client_queue)
         else:
             self._err(404, "Not found")
 
@@ -338,9 +380,22 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
                 self._json(200,{"engine_status":200,"compiled_markdown":r.decode() if r else "# Error"})
 
             elif route == '/git_sync':
-                rp = rj.get("repo_path","/home/aarav/LightBase")
+                rp = rj.get("repo_path", REPO_PATH)
                 r = lightbase.compile_native_git_branch_status(rp.encode())
                 self._json(200,{"engine_status":200,"git_status":r.decode() if r else "Error"})
+
+            elif route == '/git_watch_state':
+                # Poll the C-Core reactive git watcher state
+                raw = lightbase.poll_git_reactive_state()
+                if raw:
+                    state = json.loads(raw.decode())
+                    self._json(200, {"engine_status": 200, "git_reactive": state})
+                else:
+                    self._err(500, "Git watcher not initialized")
+
+            elif route == '/git_watch_ack':
+                lightbase.ack_git_reactive_event()
+                self._json(200, {"engine_status": 200, "status": "acknowledged"})
 
             elif route == '/ai_inference':
                 ctx = rj.get("context_payload","")
@@ -675,6 +730,121 @@ Example: {{"method":"GET","url":"https://api.example.com/users/123","body":"","e
             self._err(500, str(e))
 
 # ============================================================================
+# REACTIVE GIT WATCHER BRIDGE THREAD
+# ============================================================================
+def broadcast_sse(event):
+    """Push an event to all connected SSE clients."""
+    with sse_clients_lock:
+        dead = []
+        for q in sse_clients:
+            try:
+                q.put_nowait(event)
+            except Exception:
+                dead.append(q)
+        for q in dead:
+            sse_clients.remove(q)
+
+def git_reactive_poller():
+    """
+    Background thread that polls the C-Core git watcher for state changes.
+    When a change is detected, it:
+    1. Broadcasts SSE event to all connected UI clients
+    2. Hot-reloads schema if .db/.sql files changed
+    3. Reloads workspace configs if .json files changed
+    4. Updates AI context with the new branch architecture
+    """
+    print("[Bridge Git Reactor] 🧠 Reactive poller thread started.")
+    last_branch = ""
+
+    while True:
+        try:
+            time.sleep(1)  # Poll every second
+            raw = lightbase.poll_git_reactive_state()
+            if not raw: continue
+
+            state = json.loads(raw.decode())
+            if not state.get("dirty"): continue
+
+            event_type = state.get("event_type", "unknown")
+            branch = state.get("branch", "")
+            prev_branch = state.get("prev_branch", "")
+            head_sha = state.get("head_sha", "")
+            schema_changed = state.get("schema_changed", 0)
+            config_changed = state.get("config_changed", 0)
+            plugin_changed = state.get("plugin_changed", 0)
+            changed_files = state.get("changed_files", [])
+
+            print(f"[Bridge Git Reactor] ⚡ Event: {event_type} | Branch: {branch} | SHA: {head_sha} | Files: {len(changed_files)}")
+
+            # ── HOT-RELOAD ACTIONS ──
+            reload_actions = []
+
+            if schema_changed:
+                # Re-scan database schema for the new branch's tables
+                print(f"[Bridge Git Reactor] 🗄️ Schema change detected — hot-reloading database metadata...")
+                try:
+                    schema_res = lightbase.fetch_database_schema_tree(b"test_lightbase.db")
+                    if schema_res.payload:
+                        reload_actions.append("schema_reload")
+                        print(f"[Bridge Git Reactor] ✅ Schema tree refreshed.")
+                except Exception as e:
+                    print(f"[Bridge Git Reactor] Schema reload error: {e}")
+
+            if config_changed:
+                # Workspace JSON configs changed — signal UI to refresh collections/envs
+                print(f"[Bridge Git Reactor] 📂 Workspace config change — signaling collection/env reload...")
+                reload_actions.append("config_reload")
+
+            if plugin_changed:
+                print(f"[Bridge Git Reactor] 🐍 Plugin change detected — signaling plugin list refresh...")
+                reload_actions.append("plugin_reload")
+
+            # ── AI CONTEXT UPDATE ──
+            ai_context_update = None
+            if event_type == "branch_switch" and branch != last_branch:
+                # Build branch-aware AI context
+                ai_context_update = {
+                    "active_branch": branch,
+                    "previous_branch": prev_branch,
+                    "head_sha": head_sha,
+                    "changed_file_count": len(changed_files),
+                    "schema_changed": bool(schema_changed),
+                    "workspace_hint": f"You are now on branch '{branch}'. "
+                                      f"{'Database schema has been modified. ' if schema_changed else ''}"
+                                      f"{'Workspace configs updated. ' if config_changed else ''}"
+                                      f"{len(changed_files)} files differ from previous branch '{prev_branch}'."
+                }
+                reload_actions.append("ai_context_update")
+                print(f"[Bridge Git Reactor] 🤖 AI context packed for branch: {branch}")
+
+            last_branch = branch
+
+            # ── BROADCAST SSE TO ALL UI CLIENTS ──
+            sse_event = {
+                "type": "git_state",
+                "event_type": event_type,
+                "branch": branch,
+                "prev_branch": prev_branch,
+                "head_sha": head_sha,
+                "timestamp": state.get("timestamp", 0),
+                "changed_files": changed_files[:20],  # Limit to 20 for SSE payload
+                "changed_file_count": len(changed_files),
+                "schema_changed": bool(schema_changed),
+                "config_changed": bool(config_changed),
+                "plugin_changed": bool(plugin_changed),
+                "reload_actions": reload_actions,
+                "ai_context": ai_context_update,
+            }
+            broadcast_sse(sse_event)
+
+            # Acknowledge the event in the C-Core
+            lightbase.ack_git_reactive_event()
+
+        except Exception as e:
+            print(f"[Bridge Git Reactor] Error: {e}")
+            time.sleep(5)
+
+# ============================================================================
 # BOOT
 # ============================================================================
 if __name__ == '__main__':
@@ -683,6 +853,17 @@ if __name__ == '__main__':
     lightbase.initialize_c_core_interceptor_pool()
     lightbase.start_linux_ipc_bridge()
     lightbase.init_mmap_telemetry_log()
+
+    # Start the C-Core reactive git watcher (inotify on .git/HEAD)
+    rc = lightbase.start_git_reactive_watcher(REPO_PATH.encode())
+    if rc == 0:
+        print("[Bridge] 🧠 Git reactive watcher armed.")
+        # Start the bridge-side poller thread that processes C-Core events
+        git_thread = threading.Thread(target=git_reactive_poller, daemon=True)
+        git_thread.start()
+    else:
+        print("[Bridge] ⚠️ Git watcher failed to start (non-fatal).")
+
     httpd = HTTPServer(('', 8000), LightBaseGatewayHandler)
     httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     print("[Bridge] LightBase API → http://localhost:8000 🚀")
