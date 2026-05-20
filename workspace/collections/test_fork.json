@@ -1,0 +1,13 @@
+{
+  "name": "test_fork",
+  "requests": [
+    {
+      "name": "Get Users",
+      "method": "GET",
+      "url": "https://httpbin.org/get"
+    }
+  ],
+  "_forked_from": "test_suite_col",
+  "_forked_at": "2026-05-20T06:11:29.279339Z",
+  "_forked_by": "tester"
+}

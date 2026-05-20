@@ -66,4 +66,26 @@ EXPORT int rate_limiter_check(const char* client_id);
 EXPORT double rate_limiter_remaining(const char* client_id);
 EXPORT char* security_status_report(void);
 
+// 12. IP Allowlist / Blocklist
+EXPORT int security_add_ip_rule(const char* ip, int block);
+EXPORT int security_remove_ip_rule(const char* ip);
+EXPORT int security_check_ip(const char* ip);
+EXPORT char* security_list_ip_rules(void);
+
+// 13. Audit Trail Logger
+EXPORT void security_audit_log(const char* route, const char* client, const char* method, int status);
+EXPORT char* security_get_audit_log(int max_entries);
+EXPORT void security_clear_audit_log(void);
+
+// 14. Session Token Manager
+EXPORT char* security_create_session(const char* label, int ttl_seconds);
+EXPORT int security_validate_session(const char* token);
+EXPORT void security_revoke_session(const char* token);
+EXPORT char* security_list_sessions(void);
+
+// 15. Request Size Limiter
+EXPORT void security_set_max_request_size(size_t size_bytes);
+EXPORT int security_check_request_size(size_t size);
+EXPORT size_t security_get_max_request_size(void);
+
 #endif // ENGINE_H

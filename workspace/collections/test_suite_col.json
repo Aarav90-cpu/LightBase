@@ -1,7 +1,8 @@
 {
-  "nodes": [
+  "name": "test_suite_col",
+  "requests": [
     {
-      "type": "request",
+      "name": "Get Users",
       "method": "GET",
       "url": "https://httpbin.org/get"
     }

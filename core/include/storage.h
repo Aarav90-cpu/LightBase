@@ -6,7 +6,7 @@
 #include "engine.h"
 
 #define MAX_STORAGE_RECORDS 1024
-#define STORAGE_FILE_PATH "lightbase_telemetry.log"
+#define STORAGE_FILE_PATH "/tmp/lightbase_telemetry.log"
 #define BUFFER_SIZE 262144
 
 // ============================================================================

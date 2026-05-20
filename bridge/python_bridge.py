@@ -1,9 +1,11 @@
 import json, socket, ctypes, os, sys, sqlite3, time, threading, glob, uuid, traceback, re, queue
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from datetime import datetime
+import enterprise as ent
 
-WORKSPACE = "/home/aarav/LightBase/workspace"
-REPO_PATH = "/home/aarav/LightBase"
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WORKSPACE = os.path.join(BASE_DIR, "workspace")
+REPO_PATH = BASE_DIR
 for d in ["collections","environments","history","monitors","mocks","flows","docs","exports","plugins"]:
     os.makedirs(f"{WORKSPACE}/{d}", exist_ok=True)
 
@@ -14,14 +16,15 @@ class Response(ctypes.Structure):
     _fields_ = [("status_code", ctypes.c_int), ("payload", ctypes.c_char_p)]
 
 class TelemetryRecord(ctypes.Structure):
+    _layout_ = 'ms'
     _pack_ = 1
     _fields_ = [("timestamp", ctypes.c_uint64), ("cpu_usage", ctypes.c_float),
                 ("mem_total_mb", ctypes.c_uint32), ("mem_avail_mb", ctypes.c_uint32),
                 ("reserved", ctypes.c_uint8 * 8)]
 
 def load_lightbase_core():
-    path = "/home/aarav/LightBase/core/build_release/libcore.so"
-    if not os.path.exists(path): print(f"[Bridge] libcore.so missing"); return None
+    path = os.path.join(BASE_DIR, "core", "build_release", "libcore.so")
+    if not os.path.exists(path): print(f"[Bridge] libcore.so missing at {path}"); return None
     lib = ctypes.CDLL(path)
     for fn, at, rt in [
         ("execute_native_quickjs_assert_suite", [ctypes.c_char_p]*2, ctypes.c_char_p),
@@ -57,6 +60,24 @@ def load_lightbase_core():
     lib.rate_limiter_remaining.argtypes = [ctypes.c_char_p]; lib.rate_limiter_remaining.restype = ctypes.c_double
     lib.security_status_report.argtypes = []; lib.security_status_report.restype = ctypes.c_char_p
     lib.get_pool_telemetry.argtypes = [ctypes.POINTER(ctypes.c_uint64)]*3; lib.get_pool_telemetry.restype = None
+    # Security: IP rules
+    lib.security_add_ip_rule.argtypes = [ctypes.c_char_p, ctypes.c_int]; lib.security_add_ip_rule.restype = ctypes.c_int
+    lib.security_remove_ip_rule.argtypes = [ctypes.c_char_p]; lib.security_remove_ip_rule.restype = ctypes.c_int
+    lib.security_check_ip.argtypes = [ctypes.c_char_p]; lib.security_check_ip.restype = ctypes.c_int
+    lib.security_list_ip_rules.argtypes = []; lib.security_list_ip_rules.restype = ctypes.c_char_p
+    # Security: Audit log
+    lib.security_audit_log.argtypes = [ctypes.c_char_p]*3 + [ctypes.c_int]; lib.security_audit_log.restype = None
+    lib.security_get_audit_log.argtypes = [ctypes.c_int]; lib.security_get_audit_log.restype = ctypes.c_char_p
+    lib.security_clear_audit_log.argtypes = []; lib.security_clear_audit_log.restype = None
+    # Security: Sessions
+    lib.security_create_session.argtypes = [ctypes.c_char_p, ctypes.c_int]; lib.security_create_session.restype = ctypes.c_char_p
+    lib.security_validate_session.argtypes = [ctypes.c_char_p]; lib.security_validate_session.restype = ctypes.c_int
+    lib.security_revoke_session.argtypes = [ctypes.c_char_p]; lib.security_revoke_session.restype = None
+    lib.security_list_sessions.argtypes = []; lib.security_list_sessions.restype = ctypes.c_char_p
+    # Security: Request size
+    lib.security_set_max_request_size.argtypes = [ctypes.c_size_t]; lib.security_set_max_request_size.restype = None
+    lib.security_check_request_size.argtypes = [ctypes.c_size_t]; lib.security_check_request_size.restype = ctypes.c_int
+    lib.security_get_max_request_size.argtypes = []; lib.security_get_max_request_size.restype = ctypes.c_size_t
     return lib
 
 lightbase = load_lightbase_core()
@@ -771,6 +792,193 @@ Example: {{"method":"GET","url":"https://api.example.com/users/123","body":"","e
                 safe = lightbase.security_validate_sql(sql.encode())
                 self._json(200, {"engine_status": 200, "safe": bool(safe)})
 
+            # ============ SECURITY: IP RULES ============
+            elif route == '/security/ip/add':
+                ip = rj.get("ip", ""); action = rj.get("action", "block")
+                lightbase.security_add_ip_rule(ip.encode(), 1 if action == "block" else 0)
+                self._json(200, {"engine_status": 200, "ip": ip, "action": action})
+
+            elif route == '/security/ip/remove':
+                ip = rj.get("ip", "")
+                lightbase.security_remove_ip_rule(ip.encode())
+                self._json(200, {"engine_status": 200, "removed": ip})
+
+            elif route == '/security/ip/list':
+                raw = lightbase.security_list_ip_rules()
+                rules = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "rules": rules})
+
+            elif route == '/security/ip/check':
+                ip = rj.get("ip", "")
+                allowed = lightbase.security_check_ip(ip.encode())
+                self._json(200, {"engine_status": 200, "ip": ip, "allowed": bool(allowed)})
+
+            # ============ SECURITY: AUDIT LOG ============
+            elif route == '/security/audit/log':
+                max_entries = rj.get("max_entries", 50)
+                raw = lightbase.security_get_audit_log(max_entries)
+                entries = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "audit_entries": entries, "count": len(entries)})
+
+            elif route == '/security/audit/clear':
+                lightbase.security_clear_audit_log()
+                self._json(200, {"engine_status": 200, "status": "cleared"})
+
+            # ============ SECURITY: SESSIONS ============
+            elif route == '/security/session/create':
+                label = rj.get("label", "default")
+                ttl = rj.get("ttl_seconds", 3600)
+                raw = lightbase.security_create_session(label.encode(), ttl)
+                if raw:
+                    session = json.loads(raw.decode())
+                    self._json(200, {"engine_status": 200, **session})
+                else:
+                    self._err(500, "Session creation failed")
+
+            elif route == '/security/session/validate':
+                token = rj.get("token", "")
+                valid = lightbase.security_validate_session(token.encode())
+                self._json(200, {"engine_status": 200, "valid": bool(valid)})
+
+            elif route == '/security/session/revoke':
+                token = rj.get("token", "")
+                lightbase.security_revoke_session(token.encode())
+                self._json(200, {"engine_status": 200, "status": "revoked"})
+
+            elif route == '/security/session/list':
+                raw = lightbase.security_list_sessions()
+                sessions = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "sessions": sessions})
+
+            # ============ SECURITY: REQUEST SIZE ============
+            elif route == '/security/max_size/set':
+                size = rj.get("max_bytes", 1048576)
+                lightbase.security_set_max_request_size(size)
+                self._json(200, {"engine_status": 200, "max_request_size": size})
+
+            elif route == '/security/max_size/get':
+                size = lightbase.security_get_max_request_size()
+                self._json(200, {"engine_status": 200, "max_request_size": size})
+
+            # ============ ENTERPRISE: COLLECTION RUNNER ============
+            elif route == '/collection/run':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                iterations = rj.get("iterations", 1)
+                result = ent.run_collection(col_data, env_vars or {}, iterations, lightbase, encode_tlv)
+                # Save report
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                # Optional webhook alert
+                webhook = rj.get("webhook_url")
+                if webhook:
+                    ent.send_webhook_alert(webhook, "Collection Run Complete", {
+                        "collection": col_name, "passed": result["total_passed"],
+                        "failed": result["total_failed"], "duration_ms": result["total_time_ms"],
+                        "success": result["success"], "message": f"{col_name}: {result['total_passed']} passed, {result['total_failed']} failed"
+                    }, rj.get("webhook_platform", "generic"))
+                self._json(200, {"engine_status": 200, **result})
+
+            elif route == '/collection/run_data':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                data_content = rj.get("data", "")
+                data_format = rj.get("format", "csv")
+                base_env = rj.get("variables", {})
+                iter_data = ent.parse_iteration_data(data_content, data_format)
+                result = ent.run_collection_data_driven(col_data, iter_data, base_env, lightbase, encode_tlv)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: CI/CD REPORTS ============
+            elif route == '/report/junit':
+                report_name = rj.get("report", "")
+                run_result = rj.get("run_result") or fs_load("reports", report_name)
+                if not run_result: self._err(404, "Report not found"); return
+                xml = ent.generate_junit_xml(run_result)
+                path = f"{WORKSPACE}/reports/{report_name or 'latest'}_junit.xml"
+                with open(path, 'w') as f: f.write(xml)
+                self._json(200, {"engine_status": 200, "xml": xml, "path": path})
+
+            elif route == '/report/html':
+                report_name = rj.get("report", "")
+                run_result = rj.get("run_result") or fs_load("reports", report_name)
+                if not run_result: self._err(404, "Report not found"); return
+                html = ent.generate_html_report(run_result)
+                path = f"{WORKSPACE}/reports/{report_name or 'latest'}_report.html"
+                with open(path, 'w') as f: f.write(html)
+                self._json(200, {"engine_status": 200, "path": path})
+
+            # ============ ENTERPRISE: CODE SNIPPETS ============
+            elif route == '/codegen':
+                snippet = ent.generate_code_snippet(
+                    rj.get("method", "GET"), rj.get("url", ""),
+                    rj.get("headers", ""), rj.get("body", ""),
+                    rj.get("language", "curl"))
+                self._json(200, {"engine_status": 200, "language": rj.get("language", "curl"), "snippet": snippet})
+
+            # ============ ENTERPRISE: SCHEMA VALIDATION ============
+            elif route == '/validate/schema':
+                data = rj.get("data"); schema = rj.get("schema")
+                if not data or not schema: self._err(400, "Missing data or schema"); return
+                result = ent.validate_json_schema(data, schema)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: WORKSPACE SYNC ============
+            elif route == '/workspace/export':
+                package = ent.export_workspace(WORKSPACE)
+                path = f"{WORKSPACE}/exports/workspace_export.json"
+                with open(path, 'w') as f: json.dump(package, f, indent=2)
+                self._json(200, {"engine_status": 200, "path": path, "checksum": package.get("checksum")})
+
+            elif route == '/workspace/import':
+                package = rj.get("package", rj)
+                merge = rj.get("merge", True)
+                result = ent.import_workspace(package, WORKSPACE, merge)
+                self._json(200, {"engine_status": 200, "imported": result})
+
+            # ============ ENTERPRISE: API DOCUMENTATION ============
+            elif route == '/docs/generate':
+                result = ent.generate_api_docs_html(WORKSPACE)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: WEBHOOK ALERTS ============
+            elif route == '/webhook/send':
+                url = rj.get("webhook_url", "")
+                event = rj.get("event", "test_alert")
+                details = rj.get("details", {})
+                platform = rj.get("platform", "generic")
+                result = ent.send_webhook_alert(url, event, details, platform)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: COMMENTS & FORKING ============
+            elif route == '/collection/comment':
+                col = rj.get("collection", "")
+                text = rj.get("text", "")
+                author = rj.get("author", "anonymous")
+                result = ent.add_collection_comment(WORKSPACE, col, text, author)
+                self._json(200, {"engine_status": 200, **result})
+
+            elif route == '/collection/comments':
+                col = rj.get("collection", "")
+                comments = ent.get_collection_comments(WORKSPACE, col)
+                self._json(200, {"engine_status": 200, "comments": comments})
+
+            elif route == '/collection/fork':
+                source = rj.get("source", "")
+                fork_name = rj.get("fork_name", f"{source}_fork")
+                author = rj.get("author", "anonymous")
+                result = ent.fork_collection(WORKSPACE, source, fork_name, author)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: AUTH HELPERS ============
+            elif route == '/auth/headers':
+                headers_str = rj.get("headers", "")
+                auth_config = rj.get("auth", {})
+                result = ent.apply_auth_headers(headers_str, auth_config)
+                self._json(200, {"engine_status": 200, "headers": result})
+
             else:
                 self._err(404, "Route not found")
         except Exception as e:
@@ -916,8 +1124,33 @@ if __name__ == '__main__':
     else:
         print("[Bridge] ⚠️ Git watcher failed to start (non-fatal).")
 
-    httpd = HTTPServer(('', 8000), LightBaseGatewayHandler)
-    httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    print("[Bridge] LightBase API → http://localhost:8000 🚀")
-    try: httpd.serve_forever()
-    except KeyboardInterrupt: httpd.server_close(); print("🏁 Shutdown complete.")
+    from http.server import ThreadingHTTPServer
+    try:
+        httpd = ThreadingHTTPServer(('', 8000), LightBaseGatewayHandler)
+        httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        print("[Bridge] LightBase API → http://localhost:8000 🚀")
+        server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        server_thread.start()
+    except OSError as e:
+        if e.errno == 98:
+            print("[Bridge] Port 8000 already in use. Assuming backend is already running. Launching UI only...")
+            httpd = None
+        else:
+            raise e
+
+    try:
+        if "--headless" in sys.argv: raise ImportError("Headless mode requested")
+        import webview
+        ui_path = f"file://{os.path.join(BASE_DIR, 'ui', 'index.html')}"
+        print("[Bridge] 🖥️ Launching native desktop window...")
+        webview.create_window('LightBase Studio', ui_path, width=1280, height=800, background_color='#101216')
+        webview.start()
+        if httpd: httpd.server_close()
+        print("🏁 Native window closed. Shutdown complete.")
+    except ImportError:
+        print("[Bridge] 🌐 Running in server mode (headless or no pywebview).")
+        try:
+            while True: time.sleep(1)
+        except KeyboardInterrupt:
+            if httpd: httpd.server_close()
+            print("🏁 Shutdown complete.")

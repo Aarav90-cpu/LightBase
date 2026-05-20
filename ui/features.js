@@ -359,6 +359,58 @@ alert(`🐍 Python script exported!\n\nFile: ${data.filename}\nPath: ${data.path
 }catch(e){alert(`Export error: ${e.message}`);}}
 
 // ============================================================================
+// SECURITY DASHBOARD
+// ============================================================================
+async function loadSecurityStatus(){const p=$('sec-status');p.textContent='Loading…';
+try{const res=await fetch(`${API}/security/status`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+const data=await res.json();p.textContent=JSON.stringify(data.security||data,null,2);
+}catch(e){p.textContent=`Error: ${e.message}`;}}
+
+async function loadAuditLog(){const p=$('audit-log');p.textContent='Loading…';
+try{const res=await fetch(`${API}/security/audit/log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({max_entries:50})});
+const data=await res.json();const entries=data.audit_entries||[];
+if(!entries.length){p.textContent='// No audit entries';return;}
+p.textContent=entries.map(e=>`[${new Date(e.timestamp*1000).toLocaleTimeString()}] ${e.method} ${e.route} → ${e.status}`).join('\n');
+}catch(e){p.textContent=`Error: ${e.message}`;}}
+
+async function clearAuditLog(){
+await fetch(`${API}/security/audit/clear`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+$('audit-log').textContent='// Audit log cleared';}
+
+async function addIPRule(action){const ip=$('ip-input').value.trim();if(!ip)return;
+await fetch(`${API}/security/ip/add`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip,action})});
+$('ip-input').value='';loadIPRules();}
+
+async function loadIPRules(){const p=$('ip-rules-list');p.textContent='Loading…';
+try{const res=await fetch(`${API}/security/ip/list`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+const data=await res.json();const rules=data.rules||[];
+if(!rules.length){p.textContent='// No IP rules configured';return;}
+p.textContent=rules.map(r=>`${r.action==='block'?'⛔':'✅'} ${r.ip} → ${r.action.toUpperCase()}`).join('\n');
+}catch(e){p.textContent=`Error: ${e.message}`;}}
+
+async function createSession(){const label=$('session-label').value.trim()||'default';const ttl=parseInt($('session-ttl').value)||3600;
+try{const res=await fetch(`${API}/security/session/create`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label,ttl_seconds:ttl})});
+const data=await res.json();$('session-list').textContent=`✅ Created: ${data.label}\nToken: ${data.token}\nExpires: ${new Date(data.expires*1000).toLocaleString()}`;
+}catch(e){$('session-list').textContent=`Error: ${e.message}`;}}
+
+async function loadSessions(){const p=$('session-list');p.textContent='Loading…';
+try{const res=await fetch(`${API}/security/session/list`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});
+const data=await res.json();const sessions=data.sessions||[];
+if(!sessions.length){p.textContent='// No active sessions';return;}
+p.textContent=sessions.map(s=>`🔑 ${s.label} | ${s.token.substring(0,16)}… | TTL: ${s.remaining_sec}s`).join('\n');
+}catch(e){p.textContent=`Error: ${e.message}`;}}
+
+async function signPayload(){const payload=$('hmac-payload').value.trim();if(!payload)return;
+try{const res=await fetch(`${API}/security/sign`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload})});
+const data=await res.json();$('hmac-sig').value=data.signature||'';$('hmac-result').textContent=`✅ Signed (${data.payload_length} bytes)\nSignature: ${data.signature}`;
+}catch(e){$('hmac-result').textContent=`Error: ${e.message}`;}}
+
+async function verifyPayload(){const payload=$('hmac-payload').value.trim();const sig=$('hmac-sig').value.trim();if(!payload||!sig)return;
+try{const res=await fetch(`${API}/security/verify`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload,signature:sig})});
+const data=await res.json();$('hmac-result').textContent=data.valid?'✅ VALID — signature matches payload':'❌ INVALID — payload has been tampered';
+}catch(e){$('hmac-result').textContent=`Error: ${e.message}`;}}
+
+// ============================================================================
 // BOOT SEQUENCE
 // ============================================================================
 setInterval(pollMetrics,2000);pollMetrics();

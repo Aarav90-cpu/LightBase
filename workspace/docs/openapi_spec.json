@@ -8,7 +8,17 @@
   "paths": {
     "/get": {
       "get": {
-        "summary": "flow_test_col",
+        "summary": "Get Users",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/v1/plans": {
+      "get": {
+        "summary": "Get Plans",
         "responses": {
           "200": {
             "description": "Success"

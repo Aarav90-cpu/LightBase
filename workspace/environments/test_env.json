@@ -1,0 +1,4 @@
+{
+  "name": "test_env",
+  "base_url": "https://httpbin.org"
+}

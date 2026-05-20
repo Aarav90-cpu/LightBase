@@ -90,7 +90,9 @@ static int detect_changed_files(const char* repo_path, GitReactiveState* state) 
         return 0;
     }
 
-    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+    git_status_options opts;
+    memset(&opts, 0, sizeof(opts));
+    opts.version = GIT_STATUS_OPTIONS_VERSION;
     opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 

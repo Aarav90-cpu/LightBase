@@ -1,0 +1,10 @@
+{
+  "name": "jio_plans",
+  "requests": [
+    {
+      "name": "Get Plans",
+      "method": "GET",
+      "url": "https://api.jio.com/v1/plans"
+    }
+  ]
+}

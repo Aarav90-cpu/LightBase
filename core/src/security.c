@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <openssl/hmac.h>
 #include <openssl/rand.h>
+#include <sys/mman.h>     // mlock, madvise — kernel memory protection
 #include "engine.h"
 
 // ============================================================================
@@ -117,7 +118,12 @@ EXPORT int security_init_hmac_key(void) {
         return -1;
     }
     hmac_key_initialized = 1;
-    printf("[Security] 🔐 HMAC-SHA256 signing key initialized.\n");
+
+    // Kernel-level protection: lock HMAC key in RAM, exclude from core dumps
+    mlock(hmac_signing_key, 32);
+    madvise(hmac_signing_key, 32, MADV_DONTDUMP);
+
+    printf("[Security] 🔐 HMAC-SHA256 signing key initialized (mlock+dontdump).\n");
     return 0;
 }
 
@@ -277,10 +283,278 @@ EXPORT int security_validate_sql(const char* sql) {
 }
 
 
-// ─── 6. SECURITY STATUS REPORT ─────────────────────────────────────────────
+// ─── 6. IP ALLOWLIST / BLOCKLIST ───────────────────────────────────────────
+
+#define MAX_IP_RULES 128
+
+typedef struct {
+    char ip[64];
+    int  blocked;  // 1=blocked, 0=allowed
+} IPRule;
+
+static IPRule ip_rules[MAX_IP_RULES] = {0};
+static int ip_rule_count = 0;
+
+EXPORT int security_add_ip_rule(const char* ip, int block) {
+    if (!ip || ip_rule_count >= MAX_IP_RULES) return -1;
+    // Check for duplicate
+    for (int i = 0; i < ip_rule_count; i++) {
+        if (strcmp(ip_rules[i].ip, ip) == 0) {
+            ip_rules[i].blocked = block;
+            return 0;
+        }
+    }
+    strncpy(ip_rules[ip_rule_count].ip, ip, 63);
+    ip_rules[ip_rule_count].blocked = block;
+    ip_rule_count++;
+    printf("[Security] IP rule added: %s → %s\n", ip, block ? "BLOCKED" : "ALLOWED");
+    return 0;
+}
+
+EXPORT int security_remove_ip_rule(const char* ip) {
+    if (!ip) return -1;
+    for (int i = 0; i < ip_rule_count; i++) {
+        if (strcmp(ip_rules[i].ip, ip) == 0) {
+            // Shift remaining rules down
+            for (int j = i; j < ip_rule_count - 1; j++) {
+                ip_rules[j] = ip_rules[j + 1];
+            }
+            ip_rule_count--;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+// Returns 1 if allowed, 0 if blocked
+EXPORT int security_check_ip(const char* ip) {
+    if (!ip || ip_rule_count == 0) return 1; // No rules = allow all
+    for (int i = 0; i < ip_rule_count; i++) {
+        if (strcmp(ip_rules[i].ip, ip) == 0) {
+            if (ip_rules[i].blocked) {
+                fprintf(stderr, "[Security] ⛔ Blocked IP: %s\n", ip);
+                return 0;
+            }
+            return 1;
+        }
+    }
+    return 1; // Not in list = allow by default
+}
+
+EXPORT char* security_list_ip_rules(void) {
+    char *buf = malloc(8192);
+    if (!buf) return NULL;
+    char *ptr = buf;
+    ptr += sprintf(ptr, "[");
+    for (int i = 0; i < ip_rule_count; i++) {
+        if (i > 0) ptr += sprintf(ptr, ",");
+        ptr += sprintf(ptr, "{\"ip\":\"%s\",\"action\":\"%s\"}",
+                       ip_rules[i].ip, ip_rules[i].blocked ? "block" : "allow");
+    }
+    sprintf(ptr, "]");
+    return buf;
+}
+
+
+// ─── 7. AUDIT TRAIL LOGGER ─────────────────────────────────────────────────
+
+#define MAX_AUDIT_ENTRIES 500
+
+typedef struct {
+    char route[128];
+    char client[64];
+    char method[16];
+    uint64_t timestamp;
+    int status_code;
+} AuditEntry;
+
+static AuditEntry audit_log[MAX_AUDIT_ENTRIES] = {0};
+static int audit_head = 0;
+static int audit_count = 0;
+
+EXPORT void security_audit_log(const char* route, const char* client, const char* method, int status) {
+    AuditEntry *entry = &audit_log[audit_head];
+    strncpy(entry->route, route ? route : "", 127);
+    strncpy(entry->client, client ? client : "unknown", 63);
+    strncpy(entry->method, method ? method : "POST", 15);
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    entry->timestamp = (uint64_t)ts.tv_sec;
+    entry->status_code = status;
+    audit_head = (audit_head + 1) % MAX_AUDIT_ENTRIES;
+    if (audit_count < MAX_AUDIT_ENTRIES) audit_count++;
+}
+
+EXPORT char* security_get_audit_log(int max_entries) {
+    if (max_entries <= 0 || max_entries > audit_count) max_entries = audit_count;
+
+    char *buf = malloc(max_entries * 256 + 64);
+    if (!buf) return NULL;
+    char *ptr = buf;
+    ptr += sprintf(ptr, "[");
+
+    int start = (audit_head - max_entries + MAX_AUDIT_ENTRIES) % MAX_AUDIT_ENTRIES;
+    for (int i = 0; i < max_entries; i++) {
+        int idx = (start + i) % MAX_AUDIT_ENTRIES;
+        if (i > 0) ptr += sprintf(ptr, ",");
+        ptr += sprintf(ptr, "{\"route\":\"%s\",\"client\":\"%s\",\"method\":\"%s\",\"status\":%d,\"timestamp\":%lu}",
+                       audit_log[idx].route, audit_log[idx].client,
+                       audit_log[idx].method, audit_log[idx].status_code,
+                       (unsigned long)audit_log[idx].timestamp);
+    }
+    sprintf(ptr, "]");
+    return buf;
+}
+
+EXPORT void security_clear_audit_log(void) {
+    audit_head = 0;
+    audit_count = 0;
+    memset(audit_log, 0, sizeof(audit_log));
+}
+
+
+// ─── 8. SESSION TOKEN GENERATOR WITH EXPIRY ────────────────────────────────
+
+#define MAX_SESSIONS 64
+#define SESSION_TOKEN_LEN 32
+
+typedef struct {
+    char token[65];    // hex-encoded 32-byte token
+    char label[64];    // human label (e.g. "admin_session")
+    uint64_t created;
+    uint64_t expires;
+    int active;
+} Session;
+
+static Session sessions[MAX_SESSIONS] = {0};
+
+EXPORT char* security_create_session(const char* label, int ttl_seconds) {
+    // Find empty slot
+    int slot = -1;
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (!sessions[i].active) { slot = i; break; }
+    }
+    if (slot < 0) {
+        // Evict oldest
+        slot = 0;
+        uint64_t oldest = sessions[0].created;
+        for (int i = 1; i < MAX_SESSIONS; i++) {
+            if (sessions[i].created < oldest) { oldest = sessions[i].created; slot = i; }
+        }
+    }
+
+    // Generate random token
+    unsigned char raw[SESSION_TOKEN_LEN];
+    RAND_bytes(raw, SESSION_TOKEN_LEN);
+
+    Session *s = &sessions[slot];
+    for (int i = 0; i < SESSION_TOKEN_LEN; i++) {
+        sprintf(s->token + i * 2, "%02x", raw[i]);
+    }
+    s->token[64] = '\0';
+    strncpy(s->label, label ? label : "default", 63);
+
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    s->created = (uint64_t)ts.tv_sec;
+    s->expires = s->created + (ttl_seconds > 0 ? ttl_seconds : 3600);
+    s->active = 1;
+
+    // Wipe raw key material
+    secure_wipe(raw, SESSION_TOKEN_LEN);
+
+    // Return JSON with the token
+    char *result = malloc(256);
+    if (!result) return NULL;
+    snprintf(result, 256, "{\"token\":\"%s\",\"label\":\"%s\",\"expires\":%lu}",
+             s->token, s->label, (unsigned long)s->expires);
+    return result;
+}
+
+EXPORT int security_validate_session(const char* token) {
+    if (!token || strlen(token) != 64) return 0;
+
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    uint64_t now = (uint64_t)ts.tv_sec;
+
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].active && strcmp(sessions[i].token, token) == 0) {
+            if (now > sessions[i].expires) {
+                sessions[i].active = 0;
+                fprintf(stderr, "[Security] ⏰ Session expired: %s\n", sessions[i].label);
+                return 0;
+            }
+            return 1; // Valid
+        }
+    }
+    return 0; // Not found
+}
+
+EXPORT void security_revoke_session(const char* token) {
+    if (!token) return;
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].active && strcmp(sessions[i].token, token) == 0) {
+            secure_wipe(sessions[i].token, 65);
+            sessions[i].active = 0;
+            printf("[Security] 🗑️ Session revoked: %s\n", sessions[i].label);
+            return;
+        }
+    }
+}
+
+EXPORT char* security_list_sessions(void) {
+    char *buf = malloc(8192);
+    if (!buf) return NULL;
+    char *ptr = buf;
+    ptr += sprintf(ptr, "[");
+
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    uint64_t now = (uint64_t)ts.tv_sec;
+    int first = 1;
+
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (!sessions[i].active) continue;
+        if (!first) ptr += sprintf(ptr, ",");
+        first = 0;
+        ptr += sprintf(ptr, "{\"token\":\"%s\",\"label\":\"%s\",\"created\":%lu,\"expires\":%lu,\"remaining_sec\":%ld}",
+                       sessions[i].token, sessions[i].label,
+                       (unsigned long)sessions[i].created,
+                       (unsigned long)sessions[i].expires,
+                       (long)(sessions[i].expires - now));
+    }
+    sprintf(ptr, "]");
+    return buf;
+}
+
+
+// ─── 9. REQUEST SIZE LIMITER ───────────────────────────────────────────────
+
+static size_t max_request_size = 1048576; // 1MB default
+
+EXPORT void security_set_max_request_size(size_t size_bytes) {
+    max_request_size = size_bytes;
+    printf("[Security] 📏 Max request size set to %zu bytes\n", size_bytes);
+}
+
+EXPORT int security_check_request_size(size_t size) {
+    if (size > max_request_size) {
+        fprintf(stderr, "[Security] ⛔ Request too large: %zu > %zu bytes\n", size, max_request_size);
+        return 0;
+    }
+    return 1;
+}
+
+EXPORT size_t security_get_max_request_size(void) {
+    return max_request_size;
+}
+
+
+// ─── 10. SECURITY STATUS REPORT ────────────────────────────────────────────
 
 EXPORT char* security_status_report(void) {
-    char *report = malloc(2048);
+    char *report = malloc(4096);
     if (!report) return NULL;
 
     int active_clients = 0;
@@ -288,7 +562,12 @@ EXPORT char* security_status_report(void) {
         if (rate_table[i].active) active_clients++;
     }
 
-    snprintf(report, 2048,
+    int active_sessions = 0;
+    for (int i = 0; i < MAX_SESSIONS; i++) {
+        if (sessions[i].active) active_sessions++;
+    }
+
+    snprintf(report, 4096,
         "{"
         "\"hmac_initialized\": %s,"
         "\"rate_limiter_clients\": %d,"
@@ -297,12 +576,21 @@ EXPORT char* security_status_report(void) {
         "\"path_guard\": true,"
         "\"sql_sanitizer\": true,"
         "\"secure_wipe\": true,"
-        "\"aes_256_gcm_vault\": true"
+        "\"aes_256_gcm_vault\": true,"
+        "\"ip_rules_count\": %d,"
+        "\"audit_log_entries\": %d,"
+        "\"active_sessions\": %d,"
+        "\"max_request_size\": %zu"
         "}",
         hmac_key_initialized ? "true" : "false",
         active_clients,
         RATE_BUCKET_CAPACITY,
-        RATE_REFILL_PER_SEC);
+        RATE_REFILL_PER_SEC,
+        ip_rule_count,
+        audit_count,
+        active_sessions,
+        max_request_size);
 
     return report;
 }
+

@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
 
@@ -79,6 +80,7 @@
         <button class="tab" onclick="switchTab('plugins',this)">🐍 Plugins</button>
         <button class="tab" onclick="switchTab('docs',this)">📝 Docs</button>
         <button class="tab" onclick="switchTab('ai',this)">🤖 AI</button>
+        <button class="tab" onclick="switchTab('security',this)">🛡️ Security</button>
     </nav>
 
     <!-- DASHBOARD -->
@@ -290,6 +292,57 @@ def run(context):
     <!-- AI -->
     <section class="tab-content" id="tab-ai">
         <div class="card"><h3 class="card-title">🤖 AI Companion</h3><div style="display:flex;gap:10px;margin-bottom:12px"><input type="text" id="ai-input" class="url-input" placeholder="Ask anything…"><button class="btn btn-purple" onclick="aiInfer()">Infer</button></div><pre id="ai-output" class="code-output" style="height:350px;color:#e2b4ff">// Idle</pre></div>
+    </section>
+
+    <!-- SECURITY -->
+    <section class="tab-content" id="tab-security">
+        <div class="grid-2">
+            <div class="card">
+                <h3 class="card-title">🛡️ Security Status</h3>
+                <button class="btn btn-sm" onclick="loadSecurityStatus()">Refresh</button>
+                <pre id="sec-status" class="code-output mt-8" style="height:180px;font-size:11px">// Click Refresh</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">📋 Audit Trail</h3>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-sm" onclick="loadAuditLog()">Load</button>
+                    <button class="btn btn-sm btn-danger" onclick="clearAuditLog()">Clear</button>
+                </div>
+                <pre id="audit-log" class="code-output mt-8" style="height:180px;font-size:11px">// Click Load</pre>
+            </div>
+        </div>
+        <div class="grid-2 mt-16">
+            <div class="card">
+                <h3 class="card-title">🌐 IP Rules</h3>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <input id="ip-input" type="text" class="sb-input" placeholder="192.168.1.100" style="flex:1">
+                    <button class="btn btn-xs btn-danger" onclick="addIPRule('block')">Block</button>
+                    <button class="btn btn-xs" onclick="addIPRule('allow')" style="background:#1b5e20;color:#fff">Allow</button>
+                </div>
+                <button class="btn btn-xs btn-outline w-full" onclick="loadIPRules()">↻ Refresh</button>
+                <pre id="ip-rules-list" class="code-output mt-8" style="height:120px;font-size:11px">// Click Refresh</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">🔑 Sessions</h3>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <input id="session-label" type="text" class="sb-input" placeholder="Label (e.g. admin)" style="flex:1">
+                    <input id="session-ttl" type="number" class="sb-input" placeholder="TTL (s)" value="3600" style="width:80px">
+                    <button class="btn btn-xs" onclick="createSession()" style="background:#1a237e;color:#fff">Create</button>
+                </div>
+                <button class="btn btn-xs btn-outline w-full" onclick="loadSessions()">↻ Refresh</button>
+                <pre id="session-list" class="code-output mt-8" style="height:120px;font-size:11px">// Click Refresh</pre>
+            </div>
+        </div>
+        <div class="card mt-16">
+            <h3 class="card-title">🔐 HMAC Signing Tool</h3>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input id="hmac-payload" type="text" class="url-input" placeholder="Payload to sign…">
+                <button class="btn" onclick="signPayload()">Sign</button>
+                <button class="btn btn-purple" onclick="verifyPayload()">Verify</button>
+            </div>
+            <input id="hmac-sig" type="text" class="sb-input" placeholder="Signature (auto-filled on sign)…">
+            <pre id="hmac-result" class="code-output mt-8" style="height:60px;font-size:11px">// Results appear here</pre>
+        </div>
     </section>
 
     <!-- ENV EDITOR MODAL -->

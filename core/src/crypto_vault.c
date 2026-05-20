@@ -3,6 +3,9 @@
 #include <string.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <sys/mman.h>     // mlock, madvise
+#include <sys/prctl.h>    // prctl PR_SET_DUMPABLE
+#include <unistd.h>
 
 // Forward declaration from security.c
 extern void secure_wipe(void* ptr, size_t len);
@@ -12,11 +15,66 @@ extern void secure_wipe(void* ptr, size_t len);
 #define AES_IV_SIZE 12
 #define AES_TAG_SIZE 16
 
-// 🔒 HARDENED SYSTEM LOCK EYE: Static salt key derived from hardware footprints
-// (In production, you can derive this uniquely via /etc/machine-id)
-static const unsigned char system_master_hardware_key[AES_KEY_SIZE] =
-    {0x4A, 0x72, 0x61, 0x76, 0x4B, 0x68, 0x61, 0x72, 0x61, 0x64, 0x65, 0x4C, 0x6F, 0x63, 0x6B, 0x21,
-     0x39, 0x44, 0x33, 0x35, 0x33, 0x46, 0x38, 0x35, 0x31, 0x34, 0x39, 0x4D, 0x45, 0x54, 0x41, 0x4C};
+// ============================================================================
+// 🔐 KERNEL-LEVEL SECURITY HARDENING
+// ============================================================================
+// 1. mlock()          — Lock sensitive pages into RAM, prevent swap to disk
+// 2. MADV_DONTDUMP    — Exclude key material from core dumps
+// 3. PR_SET_DUMPABLE  — Disable core dumps entirely for this process
+// ============================================================================
+
+static unsigned char system_master_hardware_key[AES_KEY_SIZE];
+static int kernel_security_initialized = 0;
+
+// Derive master key from machine-id + static salt via SHA-256
+static void derive_master_key(void) {
+    unsigned char seed[128];
+    int seed_len = 0;
+
+    // Read /etc/machine-id for hardware-unique seed
+    FILE *f = fopen("/etc/machine-id", "r");
+    if (f) {
+        seed_len = (int)fread(seed, 1, 64, f);
+        fclose(f);
+    }
+
+    // Append static salt so the key is still useful if machine-id is unavailable
+    const unsigned char salt[] = {0x4A,0x72,0x61,0x76,0x4B,0x68,0x61,0x72,0x61,0x64,0x65,0x4C,0x6F,0x63,0x6B,0x21};
+    if (seed_len + 16 <= (int)sizeof(seed)) {
+        memcpy(seed + seed_len, salt, 16);
+        seed_len += 16;
+    }
+
+    // SHA-256 hash → 32-byte master key
+    EVP_MD_CTX *md = EVP_MD_CTX_new();
+    unsigned int md_len = 0;
+    EVP_DigestInit_ex(md, EVP_sha256(), NULL);
+    EVP_DigestUpdate(md, seed, seed_len);
+    EVP_DigestFinal_ex(md, system_master_hardware_key, &md_len);
+    EVP_MD_CTX_free(md);
+
+    secure_wipe(seed, sizeof(seed));
+}
+
+// Initialize kernel-level protections (call once at startup)
+__attribute__((constructor))
+static void init_kernel_security(void) {
+    if (kernel_security_initialized) return;
+
+    // 1. Disable core dumps to prevent secret leakage
+    prctl(PR_SET_DUMPABLE, 0);
+
+    // 2. Derive the master encryption key from hardware identity
+    derive_master_key();
+
+    // 3. Lock the master key pages into RAM (prevent swap)
+    mlock(system_master_hardware_key, AES_KEY_SIZE);
+
+    // 4. Mark master key pages as excluded from core dumps
+    madvise(system_master_hardware_key, AES_KEY_SIZE, MADV_DONTDUMP);
+
+    kernel_security_initialized = 1;
+}
 
 // --- ENCRYPT API KEY TO HARDWARE HEX BLOCK ---
 char* encrypt_api_key_system_level(const char* plain_text_key) {

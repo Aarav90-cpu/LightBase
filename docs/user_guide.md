@@ -30,6 +30,10 @@
 17. [Git Sync](#git-sync)
 18. [Cookie Jar](#cookie-jar)
 19. [Stress Testing](#stress-testing)
+20. [Security Hardening](#security-hardening)
+21. [Enterprise Engine](#enterprise-engine)
+22. [Code Snippet Generator](#code-snippet-generator)
+23. [Webhook Alerts](#webhook-alerts)
 
 ---
 
@@ -37,9 +41,11 @@
 
 ### Prerequisites
 
-- **C-Core**: Build with `cd core && mkdir -p build_release && cd build_release && cmake -DCMAKE_BUILD_TYPE=Release .. && cmake --build .`
-- **Python Dependencies**: `pip install websocket-client paho-mqtt grpcio grpcio-tools`
-- **Start Bridge**: `cd bridge && python python_bridge.py`
+- **System packages**: `sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev`
+- **Build**: `make` (installs Python deps and builds C-Core)
+- **Run**: `make run` (starts the bridge server)
+- **Test**: `make test` (runs 75 tests across 24 categories)
+- **Clean**: `make clean` (removes build artifacts, caches, logs)
 - **Open UI**: Open `ui/index.html` in any modern browser
 
 ### Architecture
@@ -584,6 +590,204 @@ r0 = requests.get('https://httpbin.org/get')
 print(f'Status: {r0.status_code}')
 print(json.dumps(r0.json(), indent=2))
 ```
+
+---
+
+## Security Hardening
+
+LightBase includes a comprehensive C-level security module accessible via the **🛡️ Security** tab and API endpoints.
+
+### Security Status Dashboard
+
+The Security tab provides a real-time overview of all active security modules:
+
+```bash
+POST /security/status
+# Returns: HMAC state, rate limiter clients, IP rules, active sessions, etc.
+```
+
+### HMAC-SHA256 Request Signing
+
+Sign and verify API payloads to ensure request integrity:
+
+```bash
+# Sign a payload
+POST /security/sign
+{"payload": "sensitive_data"}
+# → {"signature": "a3b1c9..."}
+
+# Verify integrity
+POST /security/verify
+{"payload": "sensitive_data", "signature": "a3b1c9..."}
+# → {"valid": true}
+```
+
+### IP Allowlist / Blocklist
+
+Block or allow specific IPs from the Security tab or API:
+
+```bash
+POST /security/ip/add     {"ip": "10.0.0.99", "action": "block"}
+POST /security/ip/check   {"ip": "10.0.0.99"}
+# → {"allowed": false}
+POST /security/ip/list    {}
+POST /security/ip/remove  {"ip": "10.0.0.99"}
+```
+
+### Session Token Manager
+
+Create, validate, and revoke session tokens with TTL:
+
+```bash
+POST /security/session/create   {"label": "admin", "ttl_seconds": 3600}
+# → {"token": "a3b1c9...", "expires": 1779000000}
+POST /security/session/validate {"token": "a3b1c9..."}
+# → {"valid": true}
+POST /security/session/revoke   {"token": "a3b1c9..."}
+POST /security/session/list     {}
+```
+
+### Audit Trail Logger
+
+Track all API operations in a circular buffer (500 entries):
+
+```bash
+POST /security/audit/log   {"max_entries": 50}
+POST /security/audit/clear {}
+```
+
+### Additional C-Level Protections
+
+| Feature | Description |
+|---------|-------------|
+| **Rate Limiter** | Token bucket (60 burst, 10/sec refill) with FNV-1a hashing |
+| **Path Guard** | Blocks `..`, `~`, shell metacharacters, out-of-root paths |
+| **SQL Sanitizer** | Blocks `ATTACH DATABASE`, `LOAD_EXTENSION`, injection patterns |
+| **Secure Wipe** | Volatile zero-fill + memory barrier (compiler-proof) |
+| **Request Size Limiter** | Configurable max payload size (default: 1MB) |
+| **AES-256-GCM Vault** | Encrypted API key storage at the C level |
+| **`mlock()` Key Protection** | Signing keys locked in RAM — never swapped to disk |
+| **`MADV_DONTDUMP`** | All key material excluded from core dumps |
+| **`PR_SET_DUMPABLE(0)`** | Core dumps disabled process-wide via `prctl()` |
+| **Machine-ID Key Derivation** | Master encryption key derived from `/etc/machine-id` + salt via SHA-256 |
+
+---
+
+## Enterprise Engine
+
+The Enterprise Engine (`bridge/enterprise.py`) provides production-grade features matching platforms like Postman.
+
+### Collection Runner
+
+Run entire collections with variable chaining and test execution:
+
+```bash
+POST /collection/run
+{
+    "collection": "my_api_tests",
+    "environment": "staging",
+    "iterations": 3,
+    "webhook_url": "https://hooks.slack.com/...",
+    "webhook_platform": "slack"
+}
+```
+
+Supports `{{variable}}` interpolation, response chaining via `extract`, and automatic JUnit/HTML report generation.
+
+### Data-Driven Testing
+
+Upload CSV or JSON iteration data:
+
+```bash
+POST /collection/run_data
+{
+    "collection": "user_crud",
+    "format": "csv",
+    "data": "name,email\nAlice,alice@test.io\nBob,bob@test.io"
+}
+```
+
+### CI/CD Reports
+
+```bash
+POST /report/junit  {"report": "20260520_120000"}
+# → JUnit XML (for Jenkins, GitHub Actions)
+
+POST /report/html   {"report": "20260520_120000"}
+# → Styled HTML test report
+```
+
+### JSON Schema Validation
+
+```bash
+POST /validate/schema
+{
+    "data": {"name": "Jio", "speed": 150},
+    "schema": {"type": "object", "required": ["name"], "properties": {"speed": {"type": "integer", "minimum": 10}}}
+}
+```
+
+### Workspace Export / Import
+
+```bash
+POST /workspace/export  {}
+# → SHA-256 checksummed package with all collections, environments, flows, plugins
+
+POST /workspace/import  {"package": {...}, "merge": true}
+```
+
+### Collection Comments & Forking
+
+```bash
+POST /collection/comment  {"collection": "api", "text": "LGTM", "author": "aarav"}
+POST /collection/comments {"collection": "api"}
+POST /collection/fork     {"source": "api", "fork_name": "api_v2"}
+```
+
+---
+
+## Code Snippet Generator
+
+Generate client code from any request in 6 languages:
+
+```bash
+POST /codegen
+{"method": "POST", "url": "https://api.example.com/v1/data", "headers": "Authorization: Bearer tok", "body": "{\"key\":\"val\"}", "language": "python"}
+```
+
+Supported: `curl`, `python`, `javascript`, `java`, `go`, `php`
+
+---
+
+## Webhook Alerts
+
+Send alerts to Slack, Microsoft Teams, or custom webhooks:
+
+```bash
+POST /webhook/send
+{
+    "webhook_url": "https://hooks.slack.com/services/...",
+    "event": "test_failure",
+    "platform": "slack",
+    "details": {"collection": "prod_api", "passed": 9, "failed": 1}
+}
+```
+
+Collection runs can auto-trigger webhooks by including `webhook_url` in the run request.
+
+---
+
+## Auth Helpers
+
+Apply authentication headers programmatically:
+
+```bash
+POST /auth/headers
+{"headers": "Content-Type: application/json", "auth": {"type": "bearer", "token": "eyJ..."}}
+# → {"headers": "Content-Type: application/json\r\nAuthorization: Bearer eyJ..."}
+```
+
+Supported types: `bearer`, `basic`, `api_key`, `oauth2`
 
 ---
 

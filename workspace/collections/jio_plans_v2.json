@@ -1,0 +1,13 @@
+{
+  "name": "jio_plans_v2",
+  "requests": [
+    {
+      "name": "Get Plans",
+      "method": "GET",
+      "url": "https://api.jio.com/v1/plans"
+    }
+  ],
+  "_forked_from": "jio_plans",
+  "_forked_at": "2026-05-20T05:47:57.372534Z",
+  "_forked_by": "aarav"
+}

@@ -1,44 +1,91 @@
-# ⚡ LightBase
+<p align="center">
+  <img src="assets/logo.png" alt="LightBase Logo" width="500">
+</p>
 
-**A local-first, multi-protocol API development platform powered by a native C-Core engine.**
+<h1 align="center">⚡ LightBase</h1>
 
-LightBase is a zero-cloud API development studio that combines a high-performance C backend with a Python gateway bridge and a sleek browser-based UI. Every request, collection, and environment is stored as plain JSON files you can version-control with Git — no accounts, no cloud sync, no telemetry.
+<p align="center">
+  <b>A local-first, multi-protocol API development platform powered by a native C-Core engine with enterprise-grade security hardening.</b>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/C99-Engine-blue?style=flat-square&logo=c" alt="C99">
+  <img src="https://img.shields.io/badge/Python-Bridge-green?style=flat-square&logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/Security-Kernel--Hardened-red?style=flat-square&logo=linux" alt="Security">
+  <img src="https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat-square" alt="License">
+  <img src="https://img.shields.io/badge/Tests-75%20Passing-brightgreen?style=flat-square" alt="Tests">
+</p>
+
+LightBase is a zero-cloud API development studio that combines a high-performance C99 backend with a Python gateway bridge and a sleek browser-based UI. Every request, collection, and environment is stored as plain JSON files you can version-control with Git — no accounts, no cloud sync, no telemetry.
 
 ---
 
 ## ✨ Features
 
+### Core Platform
+
 | Feature | Description |
 |---------|-------------|
 | **Multi-Protocol API Studio** | REST, GraphQL, WebSocket, gRPC, MQTT — all in one tool |
-| **Native C-Core Engine** | OpenSSL TLS, arena memory allocators, multi-threaded IPC via Unix sockets |
+| **Native C-Core Engine** | OpenSSL TLS, arena memory allocators, lock-free thread pool via Unix sockets |
 | **SQL Console** | Execute queries against local SQLite with sub-millisecond C-Core latency |
 | **Python Plugin System** | Write Python scripts with full PyPI access to process API responses |
 | **Visual Flow Builder** | Chain requests, conditions, transforms, and AI blocks into automated workflows |
 | **Live Data Streamer** | Real-time WebSocket and SSE streaming with message rate tracking |
-| **Crypto Vault** | AES-256-GCM encrypted API key storage at the C level |
 | **AI Companion** | Local llama.cpp inference for test generation, request chaining, and response explanations |
+| **Git-Reactive Engine** | Real-time `inotify`-based branch watcher with automatic hot-reload of schemas/configs |
+
+### Security Hardening (C-Level)
+
+| Feature | Description |
+|---------|-------------|
+| **HMAC-SHA256 Signing** | Sign and verify request payloads with constant-time comparison |
+| **Token Bucket Rate Limiter** | 60-burst, 10/sec refill with FNV-1a client hashing |
+| **IP Allowlist/Blocklist** | Block or allow specific IPs at the C level |
+| **Session Token Manager** | Create, validate, and revoke tokens with configurable TTL |
+| **Audit Trail Logger** | 500-entry circular buffer tracking all API operations |
+| **Path Traversal Guard** | Blocks `..`, `~`, shell metacharacters, out-of-workspace paths |
+| **SQL Injection Defense** | Blocks `ATTACH DATABASE`, `LOAD_EXTENSION`, and injection patterns |
+| **Secure Memory Wipe** | Volatile zero-fill with memory barrier (compiler-proof) |
+| **Request Size Limiter** | Configurable max payload size (default: 1MB) |
+| **AES-256-GCM Crypto Vault** | Encrypted API key storage with post-operation key wiping |
+| **`mlock()` Key Protection** | Signing keys locked in RAM — never swapped to disk |
+| **`MADV_DONTDUMP`** | All key material excluded from core dumps |
+| **`PR_SET_DUMPABLE(0)`** | Core dumps disabled process-wide via `prctl()` |
+| **Machine-ID Key Derivation** | Master encryption key derived from `/etc/machine-id` + salt via SHA-256 |
+
+### Enterprise Engine
+
+| Feature | Description |
+|---------|-------------|
+| **Collection Runner** | Run entire collections with variable chaining, test execution, and iteration support |
+| **Data-Driven Testing** | Upload CSV/JSON iteration data for parameterized test runs |
+| **CI/CD Reports** | Generate JUnit XML (Jenkins/GitHub Actions) and styled HTML reports |
+| **JSON Schema Validation** | Validate API responses against JSON Schema drafts |
+| **Code Snippet Generator** | Auto-generate client code in cURL, Python, JavaScript, Java, Go, PHP |
+| **Auth Handler** | OAuth 2.0, Bearer Token, Basic Auth, API Key — applied programmatically |
+| **Workspace Sync** | Export/import entire workspaces with SHA-256 integrity checksums |
+| **Collection Comments** | Leave review comments on API collections for team collaboration |
+| **Collection Forking** | Fork collections with metadata tracking (like Git) |
+| **Webhook Alerts** | Slack, Microsoft Teams, and generic webhook notifications |
+| **HTML API Docs** | Auto-generate styled documentation portals from collections |
 | **Jupyter & Python Export** | One-click export of history or collections to `.ipynb` or `.py` |
-| **OpenAPI Generator** | Auto-generate OpenAPI 3.0 specs from saved collections |
-| **Stress Testing** | Burst-pattern load testing with real-time C-Core latency tracking |
-| **Monitors** | Scheduled collection runners for continuous API health checks |
-| **Environment Variables** | `{{variable}}` interpolation across URLs, headers, and bodies |
-| **Git-Versionable Workspace** | Everything in `workspace/` is plain JSON — just `git push` |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────────┐     ┌──────────────────────┐
-│   Browser UI    │ ←→  │   Python Bridge       │ ←→  │   C-Core Engine      │
-│  (HTML/CSS/JS)  │HTTP │   (port 8000)         │ IPC │   (libcore.so)       │
-│                 │     │                        │ UDS │                      │
-│  • API Studio   │     │  • Route dispatcher    │     │  • OpenSSL TLS 1.3   │
-│  • SQL Console  │     │  • Plugin executor     │     │  • Arena allocators   │
-│  • Flow Builder │     │  • History logger      │     │  • Thread pool (8)    │
-│  • Dashboards   │     │  • Export engine        │     │  • mmap telemetry    │
-└─────────────────┘     └──────────────────────┘     └──────────────────────┘
+┌─────────────────┐     ┌──────────────────────────┐     ┌──────────────────────┐
+│   Browser UI    │ ←→  │   Python Bridge            │ ←→  │   C-Core Engine      │
+│  (HTML/CSS/JS)  │HTTP │   (ThreadingHTTPServer)    │ IPC │   (libcore.so)       │
+│                 │     │                            │ UDS │                      │
+│  • API Studio   │     │  • Route dispatcher        │     │  • OpenSSL TLS 1.3   │
+│  • SQL Console  │     │  • Enterprise engine       │     │  • Lock-free pool    │
+│  • Flow Builder │     │  • Plugin executor         │     │  • Security module   │
+│  • Security Tab │     │  • Export engine            │     │  • mmap telemetry    │
+│  • Dashboards   │     │  • Auth handler            │     │  • Git watcher       │
+└─────────────────┘     └──────────────────────────┘     └──────────────────────┘
                                │                           │
                          ┌─────┴──────┐              /tmp/lightbase.sock
                          │ workspace/ │              (TLV binary protocol)
@@ -48,45 +95,80 @@ LightBase is a zero-cloud API development studio that combines a high-performanc
 
 ### Layer Responsibilities
 
-- **Frontend UI** — Lightweight HTML/CSS/JS client with glassmorphism design, protocol tabs, and real-time dashboards
-- **Python Bridge** — Zero-dependency HTTP gateway (port 8000) that proxies requests to the C-Core over Unix Domain Sockets, runs Python plugins, manages filesystem storage, and handles exports
-- **C-Core (`libcore.so`)** — Multi-threaded native engine handling TLS networking, SQLite queries, telemetry logging, AES crypto, Git status, and AI inference via a binary TLV protocol over `/tmp/lightbase.sock`
+- **Native Desktop UI** — Lightweight HTML/CSS/JS client rendered in a native desktop window (via `pywebview`/WebKit2), featuring glassmorphism design, protocol tabs, security dashboard, and real-time displays.
+- **Python Bridge** — Multi-threaded HTTP gateway (ThreadingHTTPServer on port 8000) that proxies requests to the C-Core, runs the enterprise engine, manages plugins, and spins up the PyWebView window natively.
+- **C-Core (`libcore.so`)** — Lock-free multi-threaded native engine handling TLS networking, SQLite queries, telemetry logging, AES crypto, security hardening, Git reactive state, and AI inference via a binary TLV protocol over `/tmp/lightbase.sock`
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### One-Line Install (clone → build → install)
 
 ```bash
-# Build tools & dependencies
-sudo apt update && sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev
-
-# Python packages (optional, for WebSocket/MQTT/gRPC protocols)
-pip install websocket-client paho-mqtt grpcio grpcio-tools
+git clone https://github.com/Aarav90-cpu/LightBase.git
+cd LightBase
+make install-deps    # Auto-detects your distro and installs packages
+make                 # Build C-Core + install Python deps
+sudo make install    # System-wide install (appears in app menu!)
 ```
 
-### 1. Build the C-Core
+After install, launch from your app menu or terminal:
 
 ```bash
-cd core
-mkdir -p build_release && cd build_release
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
+lightbase
 ```
 
-### 2. Start the Bridge Server
+### Supported Distributions
+
+| Family | Distros | Package Manager |
+|--------|---------|-----------------|
+| **Debian/Ubuntu** | Ubuntu, Debian, Linux Mint, Pop!_OS, Kali, Zorin | `apt` |
+| **Red Hat/RPM** | Fedora, RHEL, AlmaLinux, Rocky Linux, CentOS | `dnf` |
+| **Arch** | Arch Linux, Manjaro, EndeavourOS, Garuda | `pacman` |
+| **openSUSE** | openSUSE Tumbleweed, Leap, SLES | `zypper` |
+
+`make install-deps` automatically detects your distro and runs the correct package manager.
+
+### Manual Steps (if you prefer)
 
 ```bash
-cd bridge
-python3 python_bridge.py
+# 1. Install system deps (pick your distro)
+# Debian/Ubuntu:
+sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev python3 python3-pip
+# Fedora/RHEL:
+sudo dnf install cmake gcc gcc-c++ openssl-devel sqlite-devel libgit2-devel python3 python3-pip
+# Arch/Manjaro:
+sudo pacman -S cmake base-devel openssl sqlite libgit2 python python-pip
+
+# 2. Build
+make
+
+# 3. Run locally (without system install)
+make run
 ```
 
-The C-Core initializes its thread pool, mmap telemetry log, and IPC socket automatically on boot:
+### Make Targets
+
+| Command | Description |
+|---------|-------------|
+| `make` | Build C-Core + install Python deps |
+| `make install-deps` | Auto-detect distro, install system packages |
+| `make build` | Build C-Core only |
+| `make run` | Start the bridge server (port 8000) |
+| `make test` | Run full test suite (75 tests, 24 categories) |
+| `sudo make install` | System-wide install → app menu + `lightbase` command |
+| `sudo make uninstall` | Remove system-wide install |
+| `make clean` | Remove build artifacts, caches, logs |
+| `make dist` | Create production distribution bundle |
+
+### Boot Output
 
 ```
 [C-Core Pool] Asynchronous Interceptor Grid deployed with 8 active threads!
-[C-Core IPC] Pool Main Router listening at: /tmp/lightbase.sock 🎧
+[Security] 🔐 HMAC-SHA256 signing key initialized (mlock+dontdump).
+[Bridge] 🛡️ Security module armed (HMAC + rate limiter + path guard + SQL sanitizer).
+[Bridge] 🧠 Git reactive watcher armed.
 [Bridge] LightBase API → http://localhost:8000 🚀
 ```
 
@@ -99,28 +181,43 @@ cd ui && python3 -m http.server 3000
 # → http://localhost:3000
 ```
 
+### 4. Run Tests
+
+```bash
+make test     # Runs test_all.py (75 tests across 24 categories)
+```
+
+### 5. Clean Up
+
+```bash
+make clean    # Remove build artifacts, caches, logs, temp files
+```
+
 ---
 
 ## 📂 Project Structure
 
 ```
 LightBase/
-├── core/                   # Native C engine
+├── core/                   # Native C99 engine
 │   ├── include/            # Public headers (engine.h, storage.h, tlv.h)
 │   ├── src/                # Source files
 │   │   ├── engine.c        # HTTPS engine, IPC router, SQL executor
 │   │   ├── storage.c       # mmap telemetry, schema scanner, env manager
-│   │   ├── thread_pool.c   # 8-thread worker pool
+│   │   ├── thread_pool.c   # Lock-free SPMC ring buffer (atomic CAS)
+│   │   ├── security.c      # Security hardening (10 modules)
 │   │   ├── crypto_vault.c  # AES-256-GCM key encryption
+│   │   ├── git_watcher.c   # Reactive inotify-based Git state engine
 │   │   ├── ai_core.c       # Local llama.cpp inference bridge
-│   │   └── ...
+│   │   └── assert_engine.c # QuickJS test assertion runtime
 │   └── build_release/      # Build artifacts (libcore.so)
 ├── bridge/
-│   └── python_bridge.py    # HTTP gateway + plugin runner + export engine
+│   ├── python_bridge.py    # HTTP gateway + security routes + plugin runner
+│   └── enterprise.py       # Enterprise engine (runner, reports, codegen, auth)
 ├── ui/
-│   ├── index.html          # Main application shell
+│   ├── index.html          # Main application shell (10 tabs)
 │   ├── app.js              # Core logic (requests, env, tabs, tests)
-│   ├── features.js         # Extended features (plugins, flows, AI, exports)
+│   ├── features.js         # Extended features (plugins, flows, AI, security)
 │   └── style.css           # Glassmorphism design system
 ├── workspace/              # 100% local, Git-versionable storage
 │   ├── collections/        # Saved API request configs
@@ -129,12 +226,45 @@ LightBase/
 │   ├── flows/              # Visual workflow definitions
 │   ├── history/            # Auto-logged request history
 │   ├── monitors/           # Scheduled run configs & results
-│   ├── exports/            # Generated .ipynb and .py files
-│   └── docs/               # Generated OpenAPI specs
+│   ├── reports/            # CI/CD test reports (JUnit XML, HTML)
+│   ├── exports/            # Generated workspace packages
+│   └── docs/               # Generated OpenAPI specs & HTML docs
 ├── docs/
 │   └── user_guide.md       # Comprehensive user documentation
+├── test_all.py             # Full test suite (75 tests, 24 categories)
+├── Makefile                # Cross-distro build/install/test/clean
+├── requirements.txt        # Python dependencies
+├── assets/
+│   ├── logo.png            # Project logo (used in README + app icon)
+│   ├── icons/              # Icon sizes (16→512px) for desktop integration
+│   ├── lightbase.desktop   # Freedesktop app launcher entry
+│   └── lightbase-launcher.sh # System launcher script
 └── dist/                   # Production distribution bundle
 ```
+
+---
+
+## 🛡️ Security API Reference
+
+| Endpoint | Description |
+|----------|-------------|
+| `POST /security/status` | Full security module status report |
+| `POST /security/sign` | HMAC-SHA256 sign a payload |
+| `POST /security/verify` | Verify payload signature |
+| `POST /security/validate_path` | Check path for traversal attacks |
+| `POST /security/validate_sql` | Check SQL for injection patterns |
+| `POST /security/ip/add` | Add IP allow/block rule |
+| `POST /security/ip/remove` | Remove IP rule |
+| `POST /security/ip/list` | List all IP rules |
+| `POST /security/ip/check` | Check if IP is allowed |
+| `POST /security/session/create` | Create session token with TTL |
+| `POST /security/session/validate` | Validate session token |
+| `POST /security/session/revoke` | Revoke session token |
+| `POST /security/session/list` | List active sessions |
+| `POST /security/audit/log` | Read audit trail |
+| `POST /security/audit/clear` | Clear audit trail |
+| `POST /security/max_size/set` | Set max request size |
+| `POST /security/max_size/get` | Get max request size |
 
 ---
 
@@ -148,6 +278,8 @@ LightBase delivers sub-millisecond core processing by bypassing the network stac
 | IPC roundtrip (Python ↔ C-Core) | **~1.2 ms** |
 | Outbound HTTPS (OpenSSL TLS 1.3) | Variable, with µs-precision `CLOCK_MONOTONIC` tracking |
 | Telemetry write (mmap ring buffer) | **< 10 µs** |
+| Lock-free pool task dispatch (CAS) | **< 1 µs** |
+| HMAC-SHA256 sign/verify | **< 50 µs** |
 
 ---
 
@@ -157,7 +289,7 @@ For complete feature documentation, usage guides, and API reference:
 
 **→ [User Guide](docs/user_guide.md)**
 
-Covers all features including API Studio protocols, test scripts, visual flows, plugin system, AI workflows, exports, and CI/CD integration.
+Covers all features including API Studio protocols, test scripts, visual flows, plugin system, AI workflows, exports, security hardening, and enterprise engine.
 
 ---
 
@@ -183,4 +315,4 @@ Licensed under the [Apache License 2.0](LICENSE).
 
 ---
 
-*Built with ⚡ — 100% local, zero cloud dependencies.*
+*Built with ⚡ — 100% local, zero cloud dependencies, enterprise-grade security.*
