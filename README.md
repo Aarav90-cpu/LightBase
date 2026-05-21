@@ -14,6 +14,7 @@
   <img src="https://img.shields.io/badge/Security-Kernel--Hardened-red?style=flat-square&logo=linux" alt="Security">
   <img src="https://img.shields.io/badge/License-Apache_2.0-yellow?style=flat-square" alt="License">
   <img src="https://img.shields.io/badge/Tests-75%20Passing-brightgreen?style=flat-square" alt="Tests">
+  <a href="https://www.producthunt.com/products/lightbase?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-lightbase" target="_blank" rel="noopener noreferrer"><img alt="LightBase - Lightweight API &amp; Database Desktop Client | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1151479&amp;theme=light&amp;t=1779346868320"></a>
 </p>
 
 LightBase is a zero-cloud API development studio that combines a high-performance C99 backend with a Python gateway bridge and a sleek browser-based UI. Every request, collection, and environment is stored as plain JSON files you can version-control with Git — no accounts, no cloud sync, no telemetry.
