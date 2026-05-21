@@ -2,8 +2,6 @@
   <img src="assets/logo.png" alt="LightBase Logo" width="500">
 </p>
 
-<h1 align="center">⚡ LightBase</h1>
-
 <p align="center">
   <b>A local-first, multi-protocol API development platform powered by a native C-Core engine with enterprise-grade security hardening.</b>
 </p>
