@@ -251,6 +251,26 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
                 with sse_clients_lock:
                     if client_queue in sse_clients:
                         sse_clients.remove(client_queue)
+        elif self.path == '/echo' or self.path.startswith('/echo/'):
+            # Echo service — mirrors back GET request info
+            client_ip = self.client_address[0] if self.client_address else "unknown"
+            args = {}
+            if "?" in self.path:
+                qs = self.path.split("?", 1)[1]
+                args = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            echo_response = {
+                "engine_status": 200,
+                "echo": {
+                    "method": "GET",
+                    "path": self.path.split("?")[0],
+                    "headers": dict(self.headers),
+                    "args": args,
+                    "origin": client_ip,
+                    "timestamp": datetime.now().isoformat(),
+                    "user_agent": self.headers.get("User-Agent", "unknown"),
+                }
+            }
+            self._json(200, echo_response)
         else:
             self._err(404, "Not found")
 
@@ -978,6 +998,166 @@ Example: {{"method":"GET","url":"https://api.example.com/users/123","body":"","e
                 auth_config = rj.get("auth", {})
                 result = ent.apply_auth_headers(headers_str, auth_config)
                 self._json(200, {"engine_status": 200, "headers": result})
+
+            # ============ LIGHTBASE MANAGEMENT API ============
+            # Programmatic access to all workspace resources (like Postman API)
+            elif route == '/api/collections':
+                action = rj.get("action", "list")
+                if action == "list":
+                    cols = []
+                    for name in fs_list("collections"):
+                        col = fs_load("collections", name)
+                        cols.append({"name": name, "method": col.get("method"), "url": col.get("url"), "request_count": len(col.get("requests", [col] if "url" in col else []))})
+                    self._json(200, {"engine_status": 200, "collections": cols, "total": len(cols)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    col = fs_load("collections", name)
+                    self._json(200 if col else 404, {"engine_status": 200, "collection": col} if col else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("collections", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("collections", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/environments':
+                action = rj.get("action", "list")
+                if action == "list":
+                    envs = []
+                    for name in fs_list("environments"):
+                        env = fs_load("environments", name)
+                        envs.append({"name": name, "variable_count": len(env.get("variables", env) if isinstance(env, dict) else {})})
+                    self._json(200, {"engine_status": 200, "environments": envs, "total": len(envs)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    env = fs_load("environments", name)
+                    self._json(200 if env else 404, {"engine_status": 200, "environment": env} if env else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("environments", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("environments", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/mocks':
+                action = rj.get("action", "list")
+                if action == "list":
+                    mocks_list = []
+                    for name in fs_list("mocks"):
+                        mock = fs_load("mocks", name)
+                        mocks_list.append({"name": name, "route_count": len(mock.get("routes", [])) if mock else 0})
+                    self._json(200, {"engine_status": 200, "mocks": mocks_list, "total": len(mocks_list)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    mock = fs_load("mocks", name)
+                    self._json(200 if mock else 404, {"engine_status": 200, "mock": mock} if mock else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("mocks", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("mocks", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/history':
+                action = rj.get("action", "list")
+                if action == "list":
+                    limit = rj.get("limit", 50)
+                    items = []
+                    for name in sorted(fs_list("history"), reverse=True)[:limit]:
+                        items.append(fs_load("history", name))
+                    self._json(200, {"engine_status": 200, "history": items, "total": len(items)})
+                elif action == "clear":
+                    for name in fs_list("history"): fs_delete("history", name)
+                    self._json(200, {"engine_status": 200, "status": "cleared"})
+
+            # ============ ECHO SERVICE (built-in API sanity checker) ============
+            elif route == '/echo' or route.startswith('/echo/'):
+                # Mirrors back exactly what was sent — method, headers, body, params
+                client_ip = self.client_address[0] if self.client_address else "unknown"
+                echo_response = {
+                    "engine_status": 200,
+                    "echo": {
+                        "method": "POST",
+                        "path": route,
+                        "headers": dict(self.headers),
+                        "body": rj,
+                        "args": {},
+                        "origin": client_ip,
+                        "timestamp": datetime.now().isoformat(),
+                        "content_length": cl,
+                        "user_agent": self.headers.get("User-Agent", "unknown"),
+                    }
+                }
+                # Parse query string if present
+                if "?" in self.path:
+                    qs = self.path.split("?", 1)[1]
+                    echo_response["echo"]["args"] = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+                self._json(200, echo_response)
+
+            # ============ WEBHOOK TRIGGER (trigger collection runs via URL) ============
+            elif route.startswith('/webhook/trigger/'):
+                # Extract collection name from URL: /webhook/trigger/<collection_name>
+                col_name = route.split('/webhook/trigger/', 1)[1].strip('/')
+                if not col_name:
+                    self._err(400, "Missing collection name in webhook URL")
+                else:
+                    col_data = fs_load("collections", col_name)
+                    if not col_data:
+                        self._err(404, f"Collection '{col_name}' not found")
+                    else:
+                        # Allow webhook payload to inject custom variables
+                        webhook_vars = rj.get("variables", rj.get("data", {}))
+                        env_name = rj.get("environment", "")
+                        env_vars = fs_load("environments", env_name) if env_name else webhook_vars
+                        iterations = rj.get("iterations", 1)
+                        result = ent.run_collection(col_data, env_vars or {}, iterations, lightbase, encode_tlv)
+                        report_id = f"webhook_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        fs_save("reports", report_id, result)
+                        # Optional webhook notification on completion
+                        notify_url = rj.get("notify_url")
+                        if notify_url:
+                            ent.send_webhook_alert(notify_url, "Webhook Collection Run Complete", {
+                                "collection": col_name, "passed": result["total_passed"],
+                                "failed": result["total_failed"], "success": result["success"],
+                                "triggered_by": "webhook", "report_id": report_id
+                            }, rj.get("notify_platform", "generic"))
+                        self._json(200, {"engine_status": 200, "triggered": col_name, "report_id": report_id, **result})
+
+            # ============ WORKFLOW CONTROL (setNextRequest) ============
+            elif route == '/collection/run_workflow':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                result = ent.run_collection_with_workflow(col_data, env_vars or {}, lightbase, encode_tlv)
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ COLLECTION-LEVEL SCRIPTS ============
+            elif route == '/collection/run_with_scripts':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                iterations = rj.get("iterations", 1)
+                # Collection-level scripts are stored in the collection JSON
+                col_prereq = col_data.get("collection_prereq_script", "")
+                col_test = col_data.get("collection_test_script", "")
+                result = ent.run_collection_with_scripts(col_data, env_vars or {}, iterations,
+                                                        col_prereq, col_test, lightbase, encode_tlv)
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                self._json(200, {"engine_status": 200, **result})
 
             else:
                 self._err(404, "Route not found")

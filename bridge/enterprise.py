@@ -873,3 +873,210 @@ def fork_collection(workspace_path, source_name, fork_name, author="anonymous"):
 
     return {"forked": True, "source": source_name, "fork": fork_name, "path": target}
 
+
+# ============================================================================
+# 10. WORKFLOW CONTROL — setNextRequest() SUPPORT
+# ============================================================================
+
+def run_collection_with_workflow(collection_data, env_vars, lightbase_lib, encode_tlv_fn):
+    """
+    Run a collection with Postman-style setNextRequest() workflow control.
+    Each request's test_script can call setNextRequest("name") to jump to
+    a specific request, skip requests, or loop back.
+    Max execution depth protects against infinite loops.
+    """
+    requests = collection_data.get("requests", [])
+    if isinstance(collection_data, dict) and "url" in collection_data and not requests:
+        requests = [collection_data]
+
+    if not requests:
+        return {"error": "No requests in collection", "results": [], "total_passed": 0, "total_failed": 0}
+
+    # Build name → index lookup
+    name_index = {}
+    for i, req in enumerate(requests):
+        name = req.get("name", f"Request_{i+1}")
+        name_index[name] = i
+
+    run_env = dict(env_vars) if env_vars else {}
+    results = []
+    total_passed = 0
+    total_failed = 0
+    start_time = time.time()
+
+    current_index = 0
+    max_steps = len(requests) * 10  # Safety: prevent infinite loops
+    steps = 0
+
+    while current_index < len(requests) and steps < max_steps:
+        steps += 1
+        req = requests[current_index]
+        req_name = req.get("name", f"Request_{current_index+1}")
+
+        # Execute the request
+        result = execute_single_request(req, run_env, lightbase_lib, encode_tlv_fn)
+
+        # Variable extraction (chaining)
+        extractions = req.get("extract", {})
+        for var_name, json_path in extractions.items():
+            if result["response_json"]:
+                extracted = jsonpath_extract(result["response_json"], json_path)
+                if extracted is not None:
+                    run_env[var_name] = extracted
+
+        # Run test script — check for setNextRequest in the script
+        test_script = req.get("test_script", req.get("tests", ""))
+        test_result = run_test_script(
+            test_script, result["response_json"],
+            result["response_body"], result["status_code"],
+            lightbase_lib
+        )
+        result["test_results"] = test_result
+        total_passed += test_result["passed"]
+        total_failed += test_result["failed"]
+
+        # Check for setNextRequest() in the test script (parse from script text)
+        next_request = None
+        if test_script:
+            import re as _re
+            match = _re.search(r'setNextRequest\s*\(\s*["\'](.+?)["\']\s*\)', test_script)
+            if match:
+                next_request = match.group(1)
+
+        result["workflow_step"] = steps
+        result["next_request"] = next_request
+        results.append(result)
+
+        # Determine next request
+        if next_request is not None:
+            if next_request.lower() == "null" or next_request == "":
+                break  # Stop execution
+            elif next_request in name_index:
+                current_index = name_index[next_request]
+            else:
+                # Name not found, advance normally
+                current_index += 1
+        else:
+            current_index += 1
+
+    total_time = round((time.time() - start_time) * 1000, 2)
+
+    return {
+        "collection_name": collection_data.get("name", "Unnamed"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "workflow_mode": True,
+        "total_requests": len(results),
+        "total_steps": steps,
+        "total_passed": total_passed,
+        "total_failed": total_failed,
+        "total_time_ms": total_time,
+        "results": results,
+        "final_environment": run_env,
+        "success": total_failed == 0,
+    }
+
+
+# ============================================================================
+# 11. COLLECTION-LEVEL PRE-REQUEST / TEST SCRIPTS
+# ============================================================================
+
+def run_collection_with_scripts(collection_data, env_vars, iterations,
+                                 collection_prereq_script, collection_test_script,
+                                 lightbase_lib, encode_tlv_fn):
+    """
+    Run a collection with collection-level pre-request and test scripts.
+    The collection-level pre-request script runs BEFORE each request.
+    The collection-level test script runs AFTER each request (in addition to per-request tests).
+    This follows Postman's DRY principle for shared logic.
+    """
+    requests = collection_data.get("requests", [])
+    if isinstance(collection_data, dict) and "url" in collection_data and not requests:
+        requests = [collection_data]
+
+    all_iterations = []
+    total_passed = 0
+    total_failed = 0
+    total_requests = 0
+    start_time = time.time()
+
+    run_env = dict(env_vars) if env_vars else {}
+
+    for iteration in range(max(1, iterations)):
+        iteration_results = []
+
+        for req in requests:
+            # Run collection-level pre-request script (Python)
+            if collection_prereq_script:
+                try:
+                    prereq_ns = {"env": run_env, "json": json, "os": os, "time": time}
+                    exec(collection_prereq_script, prereq_ns)
+                    # Allow the script to modify env
+                    if "env" in prereq_ns and isinstance(prereq_ns["env"], dict):
+                        run_env.update(prereq_ns["env"])
+                except Exception as e:
+                    print(f"[Enterprise] Collection pre-req script error: {e}")
+
+            # Execute request with current env
+            result = execute_single_request(req, run_env, lightbase_lib, encode_tlv_fn)
+            total_requests += 1
+
+            # Variable extraction (chaining)
+            extractions = req.get("extract", {})
+            for var_name, json_path in extractions.items():
+                if result["response_json"]:
+                    extracted = jsonpath_extract(result["response_json"], json_path)
+                    if extracted is not None:
+                        run_env[var_name] = extracted
+
+            # Run per-request test script
+            test_script = req.get("test_script", req.get("tests", ""))
+            test_result = run_test_script(
+                test_script, result["response_json"],
+                result["response_body"], result["status_code"],
+                lightbase_lib
+            )
+
+            # Run collection-level test script (appended to per-request tests)
+            col_test_result = {"passed": 0, "failed": 0, "log": ""}
+            if collection_test_script:
+                col_test_result = run_test_script(
+                    collection_test_script, result["response_json"],
+                    result["response_body"], result["status_code"],
+                    lightbase_lib
+                )
+
+            combined_passed = test_result["passed"] + col_test_result["passed"]
+            combined_failed = test_result["failed"] + col_test_result["failed"]
+            combined_log = test_result["log"]
+            if col_test_result["log"]:
+                combined_log += "\n--- Collection-Level Tests ---\n" + col_test_result["log"]
+
+            result["test_results"] = {
+                "passed": combined_passed,
+                "failed": combined_failed,
+                "log": combined_log
+            }
+            total_passed += combined_passed
+            total_failed += combined_failed
+
+            iteration_results.append(result)
+
+        all_iterations.append({
+            "iteration": iteration + 1,
+            "results": iteration_results,
+        })
+
+    total_time = round((time.time() - start_time) * 1000, 2)
+
+    return {
+        "collection_name": collection_data.get("name", "Unnamed"),
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "collection_scripts": True,
+        "total_requests": total_requests,
+        "total_passed": total_passed,
+        "total_failed": total_failed,
+        "total_time_ms": total_time,
+        "iterations": all_iterations,
+        "final_environment": run_env,
+        "success": total_failed == 0,
+    }

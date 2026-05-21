@@ -71,6 +71,21 @@ LightBase is a zero-cloud API development studio that combines a high-performanc
 | **HTML API Docs** | Auto-generate styled documentation portals from collections |
 | **Jupyter & Python Export** | One-click export of history or collections to `.ipynb` or `.py` |
 
+### 10 Power Features
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | **LightBase Management API** | Programmatically CRUD your collections, environments, mocks, and history via REST endpoints (`/api/collections`, `/api/environments`, `/api/mocks`, `/api/history`) |
+| 2 | **Built-in Echo Service** | Hit `localhost:8000/echo` to instantly mirror back your request method, headers, body, and query params — a zero-config sanity checker for debugging |
+| 3 | **Response Visualizer** | Embed custom HTML/CSS/JS visualizations (Chart.js, D3.js, etc.) directly into the response pane using the built-in sandboxed iframe renderer |
+| 4 | **Built-in Test Libraries** | Pre-request and test scripts have access to dynamic variables (`{{$timestamp}}`, `{{$guid}}`, `{{$randomInt}}`, `{{$randomEmail}}`), JSONPath extraction, and the full `lb.test()` / `lb.expect()` assertion API powered by embedded QuickJS |
+| 5 | **Workflow Control (`setNextRequest`)** | Use `setNextRequest("name")` inside test scripts to skip, repeat, or reorder requests during collection runs — with infinite-loop protection |
+| 6 | **Collaboration (Comments & Forking)** | Comment on collections, tag teammates, and fork collections with full metadata tracking (source, author, timestamp) — all stored as flat JSON in Git |
+| 7 | **Collection-Level Scripts** | Define pre-request and test scripts at the collection level that run before/after *every* request in the collection (DRY principle) |
+| 8 | **Scheduled Monitors** | Schedule collection runs at fixed intervals for continuous regression testing, with results saved as timestamped reports |
+| 9 | **Built-in GraphQL Support** | Full GraphQL query editor with variables panel, dedicated endpoint routing, and schema-aware response rendering |
+| 10 | **Webhook Triggers** | Trigger any collection run via a URL (`/webhook/trigger/<name>`) with custom payload injection — perfect for CI/CD pipelines and external integrations |
+
 ---
 
 ## 🏗️ Architecture
