@@ -37,7 +37,7 @@ add_library(core SHARED
         src/crypto_vault.c
 )
 
-find_library(QUICKJS_LIB NAMES quickjs qjs PATHS /usr/lib/quickjs /usr/lib/x86_64-linux-gnu /usr/local/lib /usr/lib)
+find_library(QUICKJS_LIB NAMES quickjs qjs PATHS /usr/lib/quickjs /usr/lib/x86_64-linux-gnu/quickjs /usr/lib/x86_64-linux-gnu /usr/lib /usr/local/lib)
 if(NOT QUICKJS_LIB)
     message(FATAL_ERROR "Could not find quickjs library")
 endif()
