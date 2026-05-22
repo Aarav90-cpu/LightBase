@@ -6,7 +6,6 @@
 #include <dlfcn.h>
 #include <pthread.h>
 #include <sys/socket.h>
-#include <sys/un.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -18,7 +17,7 @@
 #include "tlv.h"
 #include "storage.h"
 
-#define SOCKET_PATH "/tmp/lightbase.sock"
+#define IPC_PORT 8001
 
 uint32_t active_log_index = 0;
 
@@ -534,15 +533,17 @@ EXPORT int start_linux_ipc_bridge() {
     }
     printf("[C-Core Storage Engine] Log-Structured circular file mounted successfully at lightbase_telemetry.log\n");
 
-    int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd < 0) return -1;
 
-    unlink(SOCKET_PATH);
+    int opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    struct sockaddr_un server_addr;
+    struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
-    server_addr.sun_family = AF_UNIX;
-    strncpy(server_addr.sun_path, SOCKET_PATH, sizeof(server_addr.sun_path) - 1);
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server_addr.sin_port = htons(IPC_PORT);
 
     if (bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         close(server_fd);
@@ -554,7 +555,7 @@ EXPORT int start_linux_ipc_bridge() {
         return -1;
     }
 
-    printf("[C-Core IPC Multithreading] Pool Main Router listening at: %s 🎧\n", SOCKET_PATH);
+    printf("[C-Core IPC Multithreading] Pool Main Router listening at: 127.0.0.1:%d 🎧\n", IPC_PORT);
 
     int* server_fd_alloc = malloc(sizeof(int));
     *server_fd_alloc = server_fd;

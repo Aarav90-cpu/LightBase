@@ -150,8 +150,8 @@ def run_collection_monitor(col_name, interval_sec, monitor_id):
             method = req.get("method","GET"); url = req.get("url","")
             clean = url.replace("https://","").replace("http://","")
             si = clean.find("/"); host = clean[:si] if si != -1 else clean; path = clean[si:] if si != -1 else "/"
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect("/tmp/lightbase.sock")
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.connect(("127.0.0.1", 8001))
             tlv = encode_tlv(0x01, "network") + encode_tlv(0x04, host) + encode_tlv(0x05, path) + encode_tlv(0x06, "") + encode_tlv(0x07, method) + encode_tlv(0x08, "") + encode_tlv(0x09, "")
             sock.sendall(tlv)
             chunks = []
@@ -199,8 +199,8 @@ class LightBaseGatewayHandler(BaseHTTPRequestHandler):
         return bytes([tag, (l>>8)&0xFF, l&0xFF]) + vb
 
     def _ipc(self, frame, buf=65536):
-        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        client.connect("/tmp/lightbase.sock"); client.sendall(frame)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(("127.0.0.1", 8001)); client.sendall(frame)
         chunks = []
         while True:
             chunk = client.recv(buf)

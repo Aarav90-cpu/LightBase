@@ -95,9 +95,9 @@ def execute_single_request(req, env_vars, lightbase_lib, encode_tlv_fn):
 
     try:
         # Use IPC to C-Core for the actual network request
-        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(30)
-        sock.connect("/tmp/lightbase.sock")
+        sock.connect(("127.0.0.1", 8001))
         tlv = (encode_tlv_fn(0x01, "network") + encode_tlv_fn(0x04, host) +
                encode_tlv_fn(0x05, path) + encode_tlv_fn(0x06, headers_str) +
                encode_tlv_fn(0x07, method) + encode_tlv_fn(0x08, body) +

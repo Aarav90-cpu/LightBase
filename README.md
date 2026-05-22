@@ -121,7 +121,7 @@ We are having many commits and pushes right now since we are resolving make issu
 
 ### Installation via Package Managers
 
-LightBase is natively available for Debian and Arch Linux package managers.
+LightBase is natively available for Arch Linux, macOS, and Windows.
 
 #### Arch Linux (AUR)
 If you are on Arch Linux, Manjaro, or EndeavourOS, you can install LightBase directly from the Arch User Repository (AUR) using `yay`:
@@ -129,20 +129,19 @@ If you are on Arch Linux, Manjaro, or EndeavourOS, you can install LightBase dir
 ```bash
 yay -S lightbase
 ```
-OR
+
+#### macOS (Homebrew)
+For macOS, you can use Homebrew:
 ```bash
-git clone https://aur.archlinux.org/lightbase.git
-cd lightbase
-makepkg -si
+brew install cmake pkg-config openssl sqlite libgit2 python curl
+make
 ```
 
-#### Debian / Ubuntu / Mint (APT)
-For Debian-based distributions, add the LightBase apt repository and install: <WAIT UNTIL IT GETS PUBLISHED ON REPO>
-
-> **Note:** Due to Debian's fragmented packaging of `quickjs`, building native C-Core extensions might fail in some Ubuntu environments. Debian users are highly encouraged to compile LightBase manually from source.
-
+#### Windows (MSYS2)
+For Windows, we recommend using MSYS2:
 ```bash
-NOT AVAILABLE
+pacman -S --noconfirm --needed mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-openssl mingw-w64-x86_64-sqlite3 mingw-w64-x86_64-libgit2 mingw-w64-x86_64-python mingw-w64-x86_64-python-pip curl
+make
 ```
 
 ### Manual Install (Build from Source)
@@ -161,23 +160,26 @@ After install, launch from your app menu or terminal:
 lightbase
 ```
 
-### Supported Distributions
+### Supported OS
 
-| Family | Distros | Package Manager |
+| OS | Package Manager | Note |
 |--------|---------|-----------------|
-| **Debian/Ubuntu** | Ubuntu, Debian, Linux Mint, Pop!_OS, Kali, Zorin | `` BUILD YOURSELF `` |
-| **Red Hat/RPM** | Fedora, RHEL, AlmaLinux, Rocky Linux, CentOS | `` BUILD YOURSELF `` |
-| **Arch** | Arch Linux, Manjaro, EndeavourOS, Garuda | `pacman` |
-| **openSUSE** | openSUSE Tumbleweed, Leap, SLES | `` BUILD YOURSELF `` |
+| **macOS** | `brew` | Native ARM64 / x86_64 |
+| **Windows** | MSYS2 `pacman` | MinGW64 target |
+| **Red Hat/RPM** | `dnf` | Fedora, RHEL, CentOS |
+| **Arch** | `pacman` | Arch, Manjaro |
+| **openSUSE** | `zypper` | Tumbleweed, Leap |
 
 `make install-deps` automatically detects your distro and runs the correct package manager.
 
 ### Manual Steps (if you prefer)
 
 ```bash
-# 1. Install system deps (pick your distro)
-# Debian/Ubuntu:
-sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev python3 python3-pip
+# 1. Install system deps
+# macOS:
+brew install cmake pkg-config openssl sqlite libgit2 python curl
+# Windows (MSYS2):
+pacman -S --noconfirm --needed mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-openssl mingw-w64-x86_64-sqlite3 mingw-w64-x86_64-libgit2 mingw-w64-x86_64-python mingw-w64-x86_64-python-pip curl
 # Fedora/RHEL:
 sudo dnf install cmake gcc gcc-c++ openssl-devel sqlite-devel libgit2-devel python3 python3-pip
 # Arch/Manjaro:

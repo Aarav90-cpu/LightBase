@@ -45,7 +45,11 @@ all: deps build
 # Detect Linux distribution
 # ────────────────────────────────────────────────────────────────────────────
 detect-distro:
-	@if [ -f /etc/os-release ]; then \
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		echo "🍎 Detected: macOS"; \
+	elif [ "$$(uname -s | cut -c 1-5)" = "MINGW" ] || [ "$$(uname -s | cut -c 1-4)" = "MSYS" ]; then \
+		echo "🪟 Detected: Windows"; \
+	elif [ -f /etc/os-release ]; then \
 		. /etc/os-release; \
 		echo "🐧 Detected: $$NAME ($$ID family: $$ID_LIKE)"; \
 	else \
@@ -57,17 +61,15 @@ detect-distro:
 # ────────────────────────────────────────────────────────────────────────────
 install-deps: detect-distro
 	@echo "📦 Installing system dependencies..."
-	@if [ -f /etc/os-release ]; then \
+	@if [ "$$(uname -s)" = "Darwin" ]; then \
+		echo "  → macOS detected"; \
+		brew install cmake pkg-config openssl sqlite libgit2 python curl; \
+	elif [ "$$(uname -s | cut -c 1-5)" = "MINGW" ] || [ "$$(uname -s | cut -c 1-4)" = "MSYS" ]; then \
+		echo "  → Windows detected"; \
+		pacman -S --noconfirm --needed mingw-w64-x86_64-cmake mingw-w64-x86_64-gcc mingw-w64-x86_64-pkg-config mingw-w64-x86_64-openssl mingw-w64-x86_64-sqlite3 mingw-w64-x86_64-libgit2 mingw-w64-x86_64-python mingw-w64-x86_64-python-pip curl; \
+	elif [ -f /etc/os-release ]; then \
 		. /etc/os-release; \
 		case "$$ID" in \
-			ubuntu|debian|linuxmint|pop|elementary|zorin|kali) \
-				echo "  → Debian/Ubuntu family detected"; \
-				sudo apt update && sudo apt install -y \
-					cmake build-essential pkg-config \
-					libssl-dev libsqlite3-dev libgit2-dev libquickjs \
-					python3 python3-pip python3-venv \
-					python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
-					curl xdg-utils ;; \
 			fedora|rhel|centos|almalinux|rocky|ol) \
 				echo "  → Red Hat/RPM family detected"; \
 				sudo dnf install -y \
