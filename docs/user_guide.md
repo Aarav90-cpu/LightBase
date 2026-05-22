@@ -41,7 +41,7 @@
 
 ### Prerequisites
 
-- **System packages**: `sudo apt install cmake build-essential libssl-dev libsqlite3-dev libgit2-dev`
+- **System packages**: `cmake build-essential libssl-dev libsqlite3-dev libgit2-dev`
 - **Build**: `make` (installs Python deps and builds C-Core)
 - **Run**: `make run` (starts the bridge server)
 - **Test**: `make test` (runs 75 tests across 24 categories)
