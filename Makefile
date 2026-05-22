@@ -147,67 +147,71 @@ install: build
 	@echo "🚀 Installing LightBase system-wide..."
 
 	@# 1. Create installation directory
-	@sudo mkdir -p $(PREFIX)
-	@sudo mkdir -p $(PREFIX)/core/build_release
-	@sudo mkdir -p $(PREFIX)/bridge
-	@sudo mkdir -p $(PREFIX)/ui
-	@sudo mkdir -p $(PREFIX)/workspace/collections
-	@sudo mkdir -p $(PREFIX)/workspace/environments
-	@sudo mkdir -p $(PREFIX)/workspace/plugins
-	@sudo mkdir -p $(PREFIX)/workspace/flows
-	@sudo mkdir -p $(PREFIX)/workspace/history
-	@sudo mkdir -p $(PREFIX)/workspace/monitors
-	@sudo mkdir -p $(PREFIX)/workspace/reports
-	@sudo mkdir -p $(PREFIX)/workspace/exports
-	@sudo mkdir -p $(PREFIX)/workspace/docs/html
-	@sudo mkdir -p $(PREFIX)/docs
-	@sudo mkdir -p $(PREFIX)/assets/icons
+	@mkdir -p $(DESTDIR)$(PREFIX)
+	@mkdir -p $(DESTDIR)$(PREFIX)/core/build_release
+	@mkdir -p $(DESTDIR)$(PREFIX)/bridge
+	@mkdir -p $(DESTDIR)$(PREFIX)/ui
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/collections
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/environments
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/plugins
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/flows
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/history
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/monitors
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/reports
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/exports
+	@mkdir -p $(DESTDIR)$(PREFIX)/workspace/docs/html
+	@mkdir -p $(DESTDIR)$(PREFIX)/docs
+	@mkdir -p $(DESTDIR)$(PREFIX)/assets/icons
+	@mkdir -p $(DESTDIR)$(BINDIR)
+	@mkdir -p $(DESTDIR)$(DESKTOPDIR)
 
 	@# 2. Copy C-Core library
-	@sudo cp $(BUILD_DIR)/libcore.so $(PREFIX)/core/build_release/
-	@sudo cp $(BUILD_DIR)/lb-cli $(PREFIX)/core/build_release/ 2>/dev/null || true
-	@sudo cp -r $(CORE_DIR)/include $(PREFIX)/core/
+	@cp $(BUILD_DIR)/libcore.so $(DESTDIR)$(PREFIX)/core/build_release/
+	@cp $(BUILD_DIR)/lb-cli $(DESTDIR)$(PREFIX)/core/build_release/ 2>/dev/null || true
+	@cp -r $(CORE_DIR)/include $(DESTDIR)$(PREFIX)/core/
 
 	@# 3. Copy bridge
-	@sudo cp $(BRIDGE_DIR)/python_bridge.py $(PREFIX)/bridge/
-	@sudo cp $(BRIDGE_DIR)/enterprise.py $(PREFIX)/bridge/
+	@cp $(BRIDGE_DIR)/python_bridge.py $(DESTDIR)$(PREFIX)/bridge/
+	@cp $(BRIDGE_DIR)/enterprise.py $(DESTDIR)$(PREFIX)/bridge/
 
 	@# 4. Copy UI
-	@sudo cp -r $(UI_DIR)/* $(PREFIX)/ui/
+	@cp -r $(UI_DIR)/* $(DESTDIR)$(PREFIX)/ui/
 
 	@# 5. Copy docs
-	@sudo cp docs/user_guide.md $(PREFIX)/docs/ 2>/dev/null || true
+	@cp docs/user_guide.md $(DESTDIR)$(PREFIX)/docs/ 2>/dev/null || true
 
 	@# 6. Copy assets
-	@sudo cp assets/logo.png $(PREFIX)/assets/
-	@sudo cp -r assets/icons $(PREFIX)/assets/
+	@cp assets/logo.png $(DESTDIR)$(PREFIX)/assets/
+	@cp -r assets/icons $(DESTDIR)$(PREFIX)/assets/
 
 	@# 7. Install launcher script
-	@sudo cp assets/lightbase-launcher.sh $(BINDIR)/lightbase
-	@sudo chmod +x $(BINDIR)/lightbase
+	@cp assets/lightbase-launcher.sh $(DESTDIR)$(BINDIR)/lightbase
+	@chmod +x $(DESTDIR)$(BINDIR)/lightbase
 
 	@# 8. Install icons to hicolor theme (all sizes)
 	@for size in 16 32 48 64 128 256 512; do \
-		sudo mkdir -p $(ICONDIR)/$${size}x$${size}/apps; \
-		sudo cp assets/icons/lightbase_$${size}x$${size}.png \
-			$(ICONDIR)/$${size}x$${size}/apps/lightbase.png; \
+		mkdir -p $(DESTDIR)$(ICONDIR)/$${size}x$${size}/apps; \
+		cp assets/icons/lightbase_$${size}x$${size}.png \
+			$(DESTDIR)$(ICONDIR)/$${size}x$${size}/apps/lightbase.png; \
 	done
 
 	@# 9. Install .desktop entry
-	@sudo cp assets/lightbase.desktop $(DESKTOPDIR)/lightbase.desktop
-	@sudo chmod 644 $(DESKTOPDIR)/lightbase.desktop
+	@cp assets/lightbase.desktop $(DESTDIR)$(DESKTOPDIR)/lightbase.desktop
+	@chmod 644 $(DESTDIR)$(DESKTOPDIR)/lightbase.desktop
 
-	@# 10. Update icon cache and desktop database
-	@sudo gtk-update-icon-cache $(ICONDIR) 2>/dev/null || true
-	@sudo update-desktop-database $(DESKTOPDIR) 2>/dev/null || true
+	@# 10. Update icon cache and desktop database (skip in fakeroot)
+	@if [ -z "$(DESTDIR)" ]; then \
+		gtk-update-icon-cache $(ICONDIR) 2>/dev/null || true; \
+		update-desktop-database $(DESKTOPDIR) 2>/dev/null || true; \
+	fi
 
 	@# 11. Set permissions (user-writable workspace)
-	@sudo chmod -R 777 $(PREFIX)/workspace
+	@chmod -R 777 $(DESTDIR)$(PREFIX)/workspace
 
 	@echo ""
 	@echo "✅ LightBase installed successfully!"
-	@echo "   📍 Location:  $(PREFIX)"
-	@echo "   🚀 Launcher:  $(BINDIR)/lightbase"
+	@echo "   📍 Location:  $(DESTDIR)$(PREFIX)"
+	@echo "   🚀 Launcher:  $(DESTDIR)$(BINDIR)/lightbase"
 	@echo "   🖥️  App menu:  Search for 'LightBase Studio'"
 	@echo ""
 	@echo "   Run: lightbase"
@@ -217,14 +221,16 @@ install: build
 # ────────────────────────────────────────────────────────────────────────────
 uninstall:
 	@echo "🗑️  Uninstalling LightBase..."
-	@sudo rm -rf $(PREFIX)
-	@sudo rm -f $(BINDIR)/lightbase
-	@sudo rm -f $(DESKTOPDIR)/lightbase.desktop
+	@rm -rf $(DESTDIR)$(PREFIX)
+	@rm -f $(DESTDIR)$(BINDIR)/lightbase
+	@rm -f $(DESTDIR)$(DESKTOPDIR)/lightbase.desktop
 	@for size in 16 32 48 64 128 256 512; do \
-		sudo rm -f $(ICONDIR)/$${size}x$${size}/apps/lightbase.png; \
+		rm -f $(DESTDIR)$(ICONDIR)/$${size}x$${size}/apps/lightbase.png; \
 	done
-	@sudo gtk-update-icon-cache $(ICONDIR) 2>/dev/null || true
-	@sudo update-desktop-database $(DESKTOPDIR) 2>/dev/null || true
+	@if [ -z "$(DESTDIR)" ]; then \
+		gtk-update-icon-cache $(ICONDIR) 2>/dev/null || true; \
+		update-desktop-database $(DESKTOPDIR) 2>/dev/null || true; \
+	fi
 	@echo "✅ LightBase uninstalled."
 
 # ────────────────────────────────────────────────────────────────────────────
