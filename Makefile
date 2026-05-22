@@ -64,7 +64,7 @@ install-deps: detect-distro
 				echo "  → Debian/Ubuntu family detected"; \
 				sudo apt update && sudo apt install -y \
 					cmake build-essential pkg-config \
-					libssl-dev libsqlite3-dev libgit2-dev \
+					libssl-dev libsqlite3-dev libgit2-dev libquickjs \
 					python3 python3-pip python3-venv \
 					python3-gi python3-gi-cairo gir1.2-gtk-3.0 gir1.2-webkit2-4.1 \
 					curl xdg-utils ;; \
