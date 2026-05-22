@@ -38,7 +38,7 @@ add_library(core SHARED
 )
 
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(core ssl crypto sqlite3 dl m /usr/lib/quickjs/libquickjs.a pthread git2)
+target_link_libraries(core ssl crypto sqlite3 dl m quickjs pthread git2)
 
 
 # ============================================================================
@@ -53,7 +53,7 @@ add_executable(lb-cli
 
 # Enforce explicit RPATH headers so lb-cli tracks its library files dynamically at execution runtime
 set_target_properties(lb-cli PROPERTIES LINK_FLAGS "-Wl,-rpath,/home/aarav/LightBase/dist/lib")
-target_link_libraries(lb-cli core ssl crypto sqlite3 dl m /usr/lib/quickjs/libquickjs.a pthread git2)
+target_link_libraries(lb-cli core ssl crypto sqlite3 dl m quickjs pthread git2)
 
 
 # ============================================================================
