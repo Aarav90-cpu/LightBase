@@ -163,10 +163,10 @@ lightbase
 
 | Family | Distros | Package Manager |
 |--------|---------|-----------------|
-| **Debian/Ubuntu** | Ubuntu, Debian, Linux Mint, Pop!_OS, Kali, Zorin | `apt` |
-| **Red Hat/RPM** | Fedora, RHEL, AlmaLinux, Rocky Linux, CentOS | `dnf` |
+| **Debian/Ubuntu** | Ubuntu, Debian, Linux Mint, Pop!_OS, Kali, Zorin | `` BUILD YOURSELF `` |
+| **Red Hat/RPM** | Fedora, RHEL, AlmaLinux, Rocky Linux, CentOS | `` BUILD YOURSELF `` |
 | **Arch** | Arch Linux, Manjaro, EndeavourOS, Garuda | `pacman` |
-| **openSUSE** | openSUSE Tumbleweed, Leap, SLES | `zypper` |
+| **openSUSE** | openSUSE Tumbleweed, Leap, SLES | `` BUILD YOURSELF `` |
 
 `make install-deps` automatically detects your distro and runs the correct package manager.
 
