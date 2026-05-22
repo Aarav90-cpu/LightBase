@@ -43,10 +43,9 @@
 
 - **System packages**: `cmake build-essential libssl-dev libsqlite3-dev libgit2-dev`
 - **Build**: `make` (installs Python deps and builds C-Core)
-- **Run**: `make run` (starts the bridge server)
+- **Run**: `make run` (starts the bridge server and opens the UI)
 - **Test**: `make test` (runs 75 tests across 24 categories)
 - **Clean**: `make clean` (removes build artifacts, caches, logs)
-- **Open UI**: Open `ui/index.html` in any modern browser
 
 ### Architecture
 
