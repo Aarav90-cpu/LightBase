@@ -509,7 +509,7 @@ void* ipc_listener_bootstrap_loop(void* arg) {
     int server_fd = *(int*)arg;
     free(arg);
 
-    struct sockaddr_un client_addr;
+    struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
     while (1) {
