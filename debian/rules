@@ -4,7 +4,7 @@
 	dh $@
 
 override_dh_auto_build:
-	make build
+	@echo "Packaging pre-compiled binaries... skipping build."
 
 override_dh_auto_install:
-	make DESTDIR=$$(pwd)/debian/lightbase install
+	make DESTDIR=$$(pwd)/debian/lightbase SKIP_BUILD=1 install

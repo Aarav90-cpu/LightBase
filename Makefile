@@ -143,7 +143,7 @@ test:
 # Installs to /opt/lightbase with launcher in /usr/local/bin
 # Registers desktop entry so it appears in app menus
 # ────────────────────────────────────────────────────────────────────────────
-install: build
+install: $(if $(SKIP_BUILD),,build)
 	@echo "🚀 Installing LightBase system-wide..."
 
 	@# 1. Create installation directory
