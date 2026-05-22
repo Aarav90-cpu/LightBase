@@ -135,11 +135,12 @@ makepkg -si
 ```
 
 #### Debian / Ubuntu / Mint (APT)
-For Debian-based distributions, add the LightBase apt repository and install: <WAIT UNTIL IT GETS UPLOADED>
+For Debian-based distributions, add the LightBase apt repository and install: <WAIT UNTIL IT GETS PUBLISHED ON REPO>
+
+> **Note:** Due to Debian's fragmented packaging of `quickjs`, building native C-Core extensions might fail in some Ubuntu environments. Debian users are highly encouraged to compile LightBase manually from source.
 
 ```bash
-sudo apt update
-sudo apt install lightbase
+NOT AVAILABLE
 ```
 
 ### Manual Install (Build from Source)
