@@ -1,0 +1,8 @@
+/home/aarav/LightBase/core/build_release/CMakeFiles/core.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/lb-cli.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/edit_cache.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/rebuild_cache.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/list_install_components.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/install.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/install/local.dir
+/home/aarav/LightBase/core/build_release/CMakeFiles/install/strip.dir
