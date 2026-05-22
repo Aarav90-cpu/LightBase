@@ -3,8 +3,14 @@
 %:
 	dh $@
 
+override_dh_auto_clean:
+	@echo "Skipping clean to preserve pre-compiled binaries."
+
 override_dh_auto_build:
 	@echo "Packaging pre-compiled binaries... skipping build."
+
+override_dh_auto_test:
+	@echo "Skipping tests during binary packaging."
 
 override_dh_auto_install:
 	make DESTDIR=$$(pwd)/debian/lightbase SKIP_BUILD=1 install
