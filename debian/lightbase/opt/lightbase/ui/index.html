@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="LightBase Studio — Local-first, multi-protocol API development platform powered by a native C-Core engine.">
+    <title>LightBase Studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="favicon.png">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="logo"><span class="logo-icon">⚡</span> LightBase</div>
+        <button class="sidebar-toggle" id="sidebar-toggle" title="Toggle Sidebar">☰</button>
+    </div>
+    <div class="sidebar-scroll">
+        <!-- Environment -->
+        <div class="sb-section">
+            <div class="sb-title">Environment</div>
+            <select id="env-selector" class="sb-select" onchange="switchEnv()">
+                <option value="dev">🟢 Development</option>
+                <option value="staging">🟡 Staging</option>
+                <option value="prod">🔴 Production</option>
+            </select>
+            <div class="sb-hint">DB: <span id="env-db-label" class="text-green">test_lightbase.db</span></div>
+            <button class="btn btn-xs btn-outline w-full mt-4" onclick="openEnvEditor()">✏️ Edit Variables</button>
+        </div>
+        <!-- Schema -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Schema</span><button class="sb-action" onclick="refreshSchemaTree()">↻</button></div>
+            <div id="schema-tree" class="sb-tree-area"><span class="text-muted">Click ↻</span></div>
+        </div>
+        <!-- Collections -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Collections</span><button class="sb-action text-green" onclick="saveCollection()">＋</button></div>
+            <input id="col-name" type="text" class="sb-input" placeholder="Collection name…">
+            <div id="col-list" class="sb-tree-area"><span class="text-muted">None saved</span></div>
+        </div>
+        <!-- Cookie Jar -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Cookies</span><button class="sb-action text-red" onclick="clearCookies()">Clear</button></div>
+            <div id="cookie-list" class="sb-tree-area"><span class="text-muted">Empty</span></div>
+        </div>
+        <!-- Git Reactive State -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>🧠 Git State</span><button class="sb-action" onclick="pollGit()">↻</button></div>
+            <div id="git-reactive-banner" style="display:none;padding:6px 8px;border-radius:6px;margin-bottom:6px;font-size:11px;font-weight:600;animation:fadeIn .3s ease"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-bottom:4px">
+                <span id="git-branch-badge" style="background:var(--accent);color:#000;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">—</span>
+                <span id="git-sha" class="text-muted" style="font-size:10px;font-family:monospace">—</span>
+                <span id="git-sse-dot" style="width:8px;height:8px;border-radius:50%;background:#666;margin-left:auto" title="SSE disconnected"></span>
+            </div>
+            <pre id="git-output" class="sb-pre" style="max-height:80px;overflow-y:auto;font-size:10px">Connecting…</pre>
+        </div>
+        <!-- Vault -->
+        <div class="sb-section">
+            <div class="sb-title-row"><span>Crypto Vault</span></div>
+            <select id="vault-provider" class="sb-select"><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option><option value="gemini">Gemini</option></select>
+            <input id="vault-key" type="password" class="sb-input" placeholder="sk-…">
+            <button class="btn btn-xs btn-outline w-full mt-4" onclick="vaultEncrypt()">🔒 Store</button>
+            <div id="vault-status" class="sb-hint">Idle</div>
+        </div>
+    </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main-content">
+    <nav class="tab-bar">
+        <button class="tab active" onclick="switchTab('dashboard',this)">📊 Dashboard</button>
+        <button class="tab" onclick="switchTab('api',this)">🛰️ API Studio</button>
+        <button class="tab" onclick="switchTab('sql',this)">💻 SQL</button>
+        <button class="tab" onclick="switchTab('flows',this)">🔀 Flows</button>
+        <button class="tab" onclick="switchTab('monitors',this)">⏱ Monitors</button>
+        <button class="tab" onclick="switchTab('history',this)">📜 History</button>
+        <button class="tab" onclick="switchTab('plugins',this)">🐍 Plugins</button>
+        <button class="tab" onclick="switchTab('docs',this)">📝 Docs</button>
+        <button class="tab" onclick="switchTab('ai',this)">🤖 AI</button>
+        <button class="tab" onclick="switchTab('security',this)">🛡️ Security</button>
+    </nav>
+
+    <!-- DASHBOARD -->
+    <section class="tab-content active" id="tab-dashboard">
+        <div class="grid-2">
+            <div class="card"><h3 class="card-title">CPU</h3><div id="cpu-val" class="metric-value">0%</div><div class="chart-wrap"><canvas id="cpu-canvas" width="400" height="120"></canvas></div></div>
+            <div class="card"><h3 class="card-title">Memory</h3><div id="mem-val" class="metric-value">0 / 0 MB</div><div class="mem-bar-wrap"><div class="mem-bar" id="mem-bar"></div></div><div class="sb-hint mt-4">Slot: <span id="log-slot" class="text-yellow">—</span></div></div>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Telemetry History</h3><button class="btn btn-sm" onclick="loadTelemetry()">Load</button><pre id="telem-pane" class="code-output mt-8">// Click Load</pre></div>
+    </section>
+
+    <!-- API STUDIO -->
+    <section class="tab-content" id="tab-api">
+        <!-- Protocol Tabs -->
+        <div class="proto-bar">
+            <button class="proto-tab active" onclick="switchProto('rest',this)">REST</button>
+            <button class="proto-tab" onclick="switchProto('graphql',this)">GraphQL</button>
+            <button class="proto-tab" onclick="switchProto('ws',this)">WebSocket</button>
+            <button class="proto-tab" onclick="switchProto('grpc',this)">gRPC</button>
+            <button class="proto-tab" onclick="switchProto('mqtt',this)">MQTT</button>
+            <button class="proto-tab" onclick="switchProto('stream',this)">Streams</button>
+        </div>
+
+        <!-- REST -->
+        <div class="proto-panel active" id="proto-rest">
+            <div class="card">
+                <div class="method-bar">
+                    <button class="method-btn active" onclick="setMethod('GET',this)">GET</button>
+                    <button class="method-btn" onclick="setMethod('POST',this)">POST</button>
+                    <button class="method-btn" onclick="setMethod('PUT',this)">PUT</button>
+                    <button class="method-btn" onclick="setMethod('DELETE',this)">DELETE</button>
+                    <button class="method-btn" onclick="setMethod('PATCH',this)">PATCH</button>
+                    <input type="text" id="api-url" class="url-input" value="{{baseUrl}}/get" placeholder="https://…">
+                    <button class="btn" onclick="sendRequest()">Send</button>
+                </div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><div class="card-title-row"><h3 class="card-title">Headers</h3><button class="sb-action" onclick="addKv('hdr-matrix')">＋</button></div><div id="hdr-matrix"></div></div>
+                <div class="card"><h3 class="card-title">Body</h3><textarea id="req-body" class="code-textarea" placeholder='{"key":"value"}'></textarea></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><div class="card-title-row"><h3 class="card-title">Form Data</h3><button class="sb-action" onclick="addKv('form-matrix')">＋</button></div><div id="form-matrix"></div></div>
+                <div class="card"><h3 class="card-title">Pre-request Script</h3><textarea id="prereq-script" class="code-textarea" style="height:60px" placeholder="// lb.setVariable('ts', Date.now());"></textarea></div>
+            </div>
+            <div class="card mt-16">
+            <div class="card-title-row"><h3 class="card-title">Test Scripts</h3><div style="display:flex;gap:6px"><button class="btn btn-xs btn-purple" onclick="aiGenTests()">🤖 AI Generate</button><button class="btn btn-xs" onclick="aiChainNext()">🔗 Chain Next</button><button class="btn btn-xs btn-outline" onclick="aiExplain()">💡 Explain</button></div></div>
+            <textarea id="test-script" class="code-textarea" style="height:80px" placeholder='lb.test("Status OK", ()=> lb.expect(lb.response.status).toBe(200));'></textarea><pre id="test-output" class="code-output mt-8">// idle</pre>
+        </div>
+        </div>
+
+        <!-- GRAPHQL -->
+        <div class="proto-panel" id="proto-graphql">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">GraphQL</span><input type="text" id="gql-host" class="url-input" placeholder="api.example.com"><input type="text" id="gql-path" class="url-input" style="max-width:200px" value="/graphql" placeholder="/graphql"><button class="btn" onclick="sendGraphQL()">Query</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Query</h3><textarea id="gql-query" class="code-textarea" style="height:200px" placeholder="query { users { id name } }"></textarea></div>
+                <div class="card"><h3 class="card-title">Variables</h3><textarea id="gql-vars" class="code-textarea" style="height:200px" placeholder='{"id": 1}'></textarea></div>
+            </div>
+        </div>
+
+        <!-- WEBSOCKET -->
+        <div class="proto-panel" id="proto-ws">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">WebSocket</span><input type="text" id="ws-url" class="url-input" placeholder="wss://echo.websocket.org"><button class="btn" id="ws-connect-btn" onclick="wsConnect()">Connect</button></div>
+            </div>
+            <div class="card mt-16"><h3 class="card-title">Send Message</h3><div style="display:flex;gap:8px"><input type="text" id="ws-msg" class="url-input" placeholder="Hello!"><button class="btn btn-sm" onclick="wsSend()">Send</button></div></div>
+            <div class="card mt-16"><h3 class="card-title">Message Log</h3><pre id="ws-log" class="code-output" style="height:300px">// Connect to start…</pre></div>
+        </div>
+
+        <!-- gRPC -->
+        <div class="proto-panel" id="proto-grpc">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">gRPC</span><input type="text" id="grpc-target" class="url-input" placeholder="localhost:50051"><button class="btn" onclick="grpcInvoke()">Invoke</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Service / Method</h3><input type="text" id="grpc-service" class="sb-input" placeholder="helloworld.Greeter"><input type="text" id="grpc-method" class="sb-input mt-4" placeholder="SayHello"></div>
+                <div class="card"><h3 class="card-title">Message (JSON)</h3><textarea id="grpc-payload" class="code-textarea" style="height:120px" placeholder='{"name":"LightBase"}'></textarea></div>
+            </div>
+            <div class="card mt-16"><h3 class="card-title">Response</h3><pre id="grpc-output" class="code-output" style="height:200px">// Waiting…</pre></div>
+        </div>
+
+        <!-- MQTT -->
+        <div class="proto-panel" id="proto-mqtt">
+            <div class="card">
+                <div class="method-bar"><span class="proto-label">MQTT</span><input type="text" id="mqtt-broker" class="url-input" placeholder="broker.hivemq.com"><input type="number" id="mqtt-port" class="sb-input" style="width:80px" value="1883"><button class="btn" onclick="mqttPublish()">Publish</button><button class="btn btn-purple" onclick="mqttSubscribe()">Subscribe</button></div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Topic</h3><input type="text" id="mqtt-topic" class="sb-input" value="lightbase/test"><h3 class="card-title mt-8">Payload</h3><textarea id="mqtt-payload" class="code-textarea" style="height:80px" placeholder='{"sensor":"temp","value":22.5}'></textarea></div>
+                <div class="card"><h3 class="card-title">Messages</h3><pre id="mqtt-log" class="code-output" style="height:200px">// Idle</pre></div>
+            </div>
+        </div>
+
+        <!-- STREAMS -->
+        <div class="proto-panel" id="proto-stream">
+            <div class="card">
+                <div class="method-bar">
+                    <select id="stream-type" class="sb-select" style="width:100px"><option value="ws">WebSocket</option><option value="sse">SSE</option></select>
+                    <input type="text" id="stream-url" class="url-input" placeholder="wss://… or https://…/events">
+                    <label class="field-label" style="flex-direction:row;align-items:center;gap:4px">Duration<input id="stream-dur" type="number" class="sb-input" value="10" style="width:60px">s</label>
+                    <button class="btn" onclick="startStream()">▶ Stream</button>
+                </div>
+            </div>
+            <div class="grid-2 mt-16">
+                <div class="card"><h3 class="card-title">Live Data</h3><div class="stream-stats" id="stream-stats">Messages: <span id="stream-count">0</span> | Rate: <span id="stream-rate">0</span>/sec</div><pre id="stream-log" class="code-output" style="height:350px">// Connect to start streaming…</pre></div>
+                <div class="card"><h3 class="card-title">Message Inspector</h3><pre id="stream-inspect" class="code-output" style="height:350px">// Click a message to inspect</pre></div>
+            </div>
+        </div>
+
+        <!-- RESPONSE VIEWER (shared) -->
+        <div class="card mt-16" id="response-card">
+            <div class="card-title-row"><h3 class="card-title">Response</h3><span class="badge" id="resp-badge">—</span></div>
+            <div class="response-meta"><span>⏱ <span id="resp-lat">0 µs</span></span><span>📦 <span id="resp-size">0 B</span></span><span>Protocol: <span id="resp-proto" class="text-cyan">REST</span></span></div>
+            <input id="resp-filter" type="text" class="sb-input" oninput="filterResp()" placeholder="🔍 Filter…" style="margin-bottom:8px">
+            <pre id="resp-viewer" class="code-output" style="height:280px">// Awaiting…</pre>
+            <details class="mt-8"><summary class="text-muted" style="cursor:pointer;font-size:12px">Hex Dump</summary><pre id="hex-viewer" class="code-output" style="height:140px;font-size:11px"></pre></details>
+            <details class="mt-8"><summary class="text-muted" style="cursor:pointer;font-size:12px">Visualizer</summary><div style="margin-top:8px"><textarea id="viz-code" class="code-textarea" style="height:60px" placeholder='// HTML/CSS/JS — use `data` variable&#10;document.body.innerHTML = "<h1>"+data.url+"</h1>";'></textarea><button class="btn btn-xs mt-4" onclick="runVisualizer()">▶ Render</button><iframe id="viz-frame" sandbox="allow-scripts" class="viz-iframe"></iframe></div></details>
+        </div>
+        <!-- Stress -->
+        <div class="card mt-16"><h3 class="card-title">🏎️ Stress Test</h3><div style="display:flex;gap:12px;align-items:end;margin-bottom:12px"><label class="field-label">Count<input id="stress-n" type="number" class="sb-input" value="20" style="width:80px"></label><label class="field-label">Delay(ms)<input id="stress-d" type="number" class="sb-input" value="100" style="width:80px"></label><button class="btn btn-danger" onclick="runStress()">🔥 Ignite</button></div><pre id="stress-log" class="code-output" style="height:120px">// Ready</pre></div>
+    </section>
+
+    <!-- SQL -->
+    <section class="tab-content" id="tab-sql">
+        <div class="card"><h3 class="card-title">SQL Console</h3><textarea id="sql-input" class="code-textarea" style="height:140px" placeholder="SELECT * FROM users;"></textarea><div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px"><span class="text-muted">Speed: <span id="sql-lat" class="text-cyan">0 µs</span></span><button class="btn" onclick="runSQL()">⚡ Execute</button></div><pre id="sql-output" class="code-output mt-8" style="height:300px">// Results</pre></div>
+    </section>
+
+    <!-- FLOWS -->
+    <section class="tab-content" id="tab-flows">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">Visual Flow Builder</h3>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-xs" onclick="addFlowNode('request')">＋ Request</button>
+                    <button class="btn btn-xs btn-purple" onclick="addFlowNode('condition')">＋ Condition</button>
+                    <button class="btn btn-xs btn-outline" onclick="addFlowNode('transform')">＋ Transform</button>
+                    <button class="btn btn-xs" style="background:var(--accent-yellow);color:#000" onclick="addFlowNode('ai')">＋ AI Block</button>
+                    <input type="text" id="flow-name" class="sb-input" placeholder="Flow name" style="width:140px">
+                    <button class="btn btn-xs" onclick="saveFlow()">💾 Save</button>
+                    <button class="btn btn-xs btn-danger" onclick="runFlow()">▶ Run</button>
+                </div>
+            </div>
+            <div id="flow-canvas" class="flow-canvas"></div>
+            <pre id="flow-output" class="code-output mt-8" style="height:150px">// Flow output</pre>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Saved Flows</h3><div id="flow-list" class="sb-tree-area"><span class="text-muted">None</span></div></div>
+    </section>
+
+    <!-- MONITORS -->
+    <section class="tab-content" id="tab-monitors">
+        <div class="card">
+            <h3 class="card-title">Collection Monitors</h3>
+            <div style="display:flex;gap:12px;align-items:end;margin-bottom:12px">
+                <label class="field-label">Collection<select id="mon-col" class="sb-select" style="width:200px"></select></label>
+                <label class="field-label">Interval (sec)<input id="mon-interval" type="number" class="sb-input" value="60" style="width:80px"></label>
+                <button class="btn" onclick="runMonitorOnce()">▶ Run Once</button>
+                <button class="btn btn-purple" onclick="scheduleMonitor()">⏱ Schedule</button>
+            </div>
+            <pre id="mon-output" class="code-output" style="height:250px">// Monitor results</pre>
+        </div>
+        <div class="card mt-16"><h3 class="card-title">Active Monitors</h3><div id="mon-list"></div></div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="tab-content" id="tab-history">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">Request History</h3><div style="display:flex;gap:6px"><button class="btn btn-xs" onclick="exportNotebook('history')">📓 Export .ipynb</button><button class="btn btn-xs btn-outline" onclick="exportPython('history')">🐍 Export .py</button><button class="btn btn-xs btn-danger" onclick="clearHistory()">🗑 Clear</button></div></div>
+            <input type="text" id="hist-search" class="sb-input" placeholder="🔍 Search history…" oninput="loadHistory()">
+            <div id="hist-list" class="mt-8"></div>
+        </div>
+    </section>
+
+    <!-- PLUGINS -->
+    <section class="tab-content" id="tab-plugins">
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title-row"><h3 class="card-title">Plugin Editor</h3><div style="display:flex;gap:6px"><button class="btn btn-xs" onclick="savePlugin()">💾 Save</button><button class="btn btn-xs btn-purple" onclick="runPlugin()">▶ Run</button></div></div>
+                <input type="text" id="plugin-name" class="sb-input" placeholder="my_plugin" style="margin-bottom:8px">
+                <textarea id="plugin-code" class="code-textarea" style="height:250px" placeholder='import json
+
+def run(context):
+    """Process API request/response data"""
+    # context has: url, method, body, response
+    data = context.get("response", {})
+    return {"processed": True, "keys": list(data.keys())}'></textarea>
+                <pre id="plugin-output" class="code-output mt-8" style="height:120px">// Output appears here</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">Installed Plugins</h3>
+                <div id="plugin-list" class="sb-tree-area" style="max-height:200px"><span class="text-muted">None</span></div>
+                <h3 class="card-title mt-16">📦 Package Installer</h3>
+                <div style="display:flex;gap:8px"><input type="text" id="pip-pkg" class="sb-input" placeholder="pandas, numpy, beautifulsoup4…"><button class="btn btn-xs" onclick="pipInstall()">Install</button></div>
+                <pre id="pip-output" class="code-output mt-8" style="height:80px">// pip output</pre>
+                <h3 class="card-title mt-16">How Plugins Work</h3>
+                <div class="sb-hint">Write a Python script with a <code>run(context)</code> function. The context dict contains the current request URL, method, body, headers, and response data. Import any PyPI package — pandas, numpy, scikit-learn, beautifulsoup4, etc. Return processed data back to the UI.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DOCS -->
+    <section class="tab-content" id="tab-docs">
+        <div class="card">
+            <div class="card-title-row"><h3 class="card-title">API Documentation</h3>
+                <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="genDocs()">🛠️ Schema Docs</button><button class="btn btn-sm btn-purple" onclick="exportOpenAPI()">📋 Export OpenAPI</button></div>
+            </div>
+            <textarea id="docs-pane" class="code-textarea" style="height:400px" placeholder="// Generated docs…" readonly></textarea>
+        </div>
+    </section>
+
+    <!-- AI -->
+    <section class="tab-content" id="tab-ai">
+        <div class="card"><h3 class="card-title">🤖 AI Companion</h3><div style="display:flex;gap:10px;margin-bottom:12px"><input type="text" id="ai-input" class="url-input" placeholder="Ask anything…"><button class="btn btn-purple" onclick="aiInfer()">Infer</button></div><pre id="ai-output" class="code-output" style="height:350px;color:#e2b4ff">// Idle</pre></div>
+    </section>
+
+    <!-- SECURITY -->
+    <section class="tab-content" id="tab-security">
+        <div class="grid-2">
+            <div class="card">
+                <h3 class="card-title">🛡️ Security Status</h3>
+                <button class="btn btn-sm" onclick="loadSecurityStatus()">Refresh</button>
+                <pre id="sec-status" class="code-output mt-8" style="height:180px;font-size:11px">// Click Refresh</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">📋 Audit Trail</h3>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-sm" onclick="loadAuditLog()">Load</button>
+                    <button class="btn btn-sm btn-danger" onclick="clearAuditLog()">Clear</button>
+                </div>
+                <pre id="audit-log" class="code-output mt-8" style="height:180px;font-size:11px">// Click Load</pre>
+            </div>
+        </div>
+        <div class="grid-2 mt-16">
+            <div class="card">
+                <h3 class="card-title">🌐 IP Rules</h3>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <input id="ip-input" type="text" class="sb-input" placeholder="192.168.1.100" style="flex:1">
+                    <button class="btn btn-xs btn-danger" onclick="addIPRule('block')">Block</button>
+                    <button class="btn btn-xs" onclick="addIPRule('allow')" style="background:#1b5e20;color:#fff">Allow</button>
+                </div>
+                <button class="btn btn-xs btn-outline w-full" onclick="loadIPRules()">↻ Refresh</button>
+                <pre id="ip-rules-list" class="code-output mt-8" style="height:120px;font-size:11px">// Click Refresh</pre>
+            </div>
+            <div class="card">
+                <h3 class="card-title">🔑 Sessions</h3>
+                <div style="display:flex;gap:6px;margin-bottom:8px">
+                    <input id="session-label" type="text" class="sb-input" placeholder="Label (e.g. admin)" style="flex:1">
+                    <input id="session-ttl" type="number" class="sb-input" placeholder="TTL (s)" value="3600" style="width:80px">
+                    <button class="btn btn-xs" onclick="createSession()" style="background:#1a237e;color:#fff">Create</button>
+                </div>
+                <button class="btn btn-xs btn-outline w-full" onclick="loadSessions()">↻ Refresh</button>
+                <pre id="session-list" class="code-output mt-8" style="height:120px;font-size:11px">// Click Refresh</pre>
+            </div>
+        </div>
+        <div class="card mt-16">
+            <h3 class="card-title">🔐 HMAC Signing Tool</h3>
+            <div style="display:flex;gap:8px;margin-bottom:8px">
+                <input id="hmac-payload" type="text" class="url-input" placeholder="Payload to sign…">
+                <button class="btn" onclick="signPayload()">Sign</button>
+                <button class="btn btn-purple" onclick="verifyPayload()">Verify</button>
+            </div>
+            <input id="hmac-sig" type="text" class="sb-input" placeholder="Signature (auto-filled on sign)…">
+            <pre id="hmac-result" class="code-output mt-8" style="height:60px;font-size:11px">// Results appear here</pre>
+        </div>
+    </section>
+
+    <!-- ENV EDITOR MODAL -->
+    <div id="env-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="card-title-row"><h3 class="card-title">Environment Variables</h3><button class="sb-action text-red" onclick="closeEnvEditor()">✕</button></div>
+            <div id="env-vars-editor"></div>
+            <button class="sb-action text-green" onclick="addEnvVar()">＋ Add Variable</button>
+            <button class="btn mt-8 w-full" onclick="saveEnvVars()">💾 Save</button>
+        </div>
+    </div>
+</main>
+
+<script src="app.js"></script>
+<script src="features.js"></script>
+</body>
+</html>

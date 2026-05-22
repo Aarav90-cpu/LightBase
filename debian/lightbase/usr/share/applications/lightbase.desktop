@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=LightBase Studio
+Comment=Local-first, multi-protocol API development platform powered by a native C-Core engine
+Exec=lightbase
+Icon=lightbase
+Terminal=false
+Type=Application
+Categories=Development;IDE;WebDevelopment;
+Keywords=API;REST;GraphQL;WebSocket;gRPC;Database;SQL;
+StartupWMClass=LightBase
+MimeType=application/json;

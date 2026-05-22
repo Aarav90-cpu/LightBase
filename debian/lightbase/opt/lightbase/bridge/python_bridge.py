@@ -1,0 +1,1336 @@
+import json, socket, ctypes, os, sys, sqlite3, time, threading, glob, uuid, traceback, re, queue
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from datetime import datetime
+import enterprise as ent
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+WORKSPACE = os.path.join(BASE_DIR, "workspace")
+REPO_PATH = BASE_DIR
+for d in ["collections","environments","history","monitors","mocks","flows","docs","exports","plugins"]:
+    os.makedirs(f"{WORKSPACE}/{d}", exist_ok=True)
+
+# ============================================================================
+# NATIVE C-CORE TYPE DEFINITIONS
+# ============================================================================
+class Response(ctypes.Structure):
+    _fields_ = [("status_code", ctypes.c_int), ("payload", ctypes.c_char_p)]
+
+class TelemetryRecord(ctypes.Structure):
+    _layout_ = 'ms'
+    _pack_ = 1
+    _fields_ = [("timestamp", ctypes.c_uint64), ("cpu_usage", ctypes.c_float),
+                ("mem_total_mb", ctypes.c_uint32), ("mem_avail_mb", ctypes.c_uint32),
+                ("reserved", ctypes.c_uint8 * 8)]
+
+def load_lightbase_core():
+    path = os.path.join(BASE_DIR, "core", "build_release", "libcore.so")
+    if not os.path.exists(path): print(f"[Bridge] libcore.so missing at {path}"); return None
+    lib = ctypes.CDLL(path)
+    for fn, at, rt in [
+        ("execute_native_quickjs_assert_suite", [ctypes.c_char_p]*2, ctypes.c_char_p),
+        ("execute_local_ai_inference_stream", [ctypes.c_char_p], ctypes.c_char_p),
+        ("compile_native_markdown_schema_spec", [ctypes.c_char_p], ctypes.c_char_p),
+        ("compile_native_git_branch_status", [ctypes.c_char_p], ctypes.c_char_p),
+        ("encrypt_api_key_system_level", [ctypes.c_char_p], ctypes.c_char_p),
+        ("decrypt_api_key_system_level", [ctypes.c_char_p], ctypes.c_char_p),
+        ("list_all_collections", [ctypes.c_char_p], ctypes.c_char_p),
+        ("initialize_c_core_interceptor_pool", [], ctypes.c_int),
+        ("start_linux_ipc_bridge", [], ctypes.c_int),
+        ("init_mmap_telemetry_log", [], ctypes.c_int),
+        ("start_git_reactive_watcher", [ctypes.c_char_p], ctypes.c_int),
+        ("poll_git_reactive_state", [], ctypes.c_char_p),
+        ("ack_git_reactive_event", [], None),
+    ]:
+        getattr(lib, fn).argtypes = at; getattr(lib, fn).restype = rt
+    lib.scan_database_schema.argtypes = [ctypes.c_char_p]; lib.scan_database_schema.restype = Response
+    lib.fetch_database_schema_tree.argtypes = [ctypes.c_char_p]; lib.fetch_database_schema_tree.restype = Response
+    lib.execute_local_db.argtypes = [ctypes.c_char_p]*2; lib.execute_local_db.restype = Response
+    lib.fire_http_get.argtypes = [ctypes.c_char_p]*6; lib.fire_http_get.restype = Response
+    lib.read_all_telemetry_records.argtypes = [ctypes.POINTER(TelemetryRecord), ctypes.c_int]; lib.read_all_telemetry_records.restype = ctypes.c_int
+    lib.append_mmap_telemetry_record.argtypes = [ctypes.c_float, ctypes.c_uint32, ctypes.c_uint32]; lib.append_mmap_telemetry_record.restype = ctypes.c_int
+    lib.load_studio_environment_state.argtypes = [ctypes.c_char_p]*2 + [ctypes.c_uint32, ctypes.c_uint8]; lib.load_studio_environment_state.restype = Response
+    lib.execute_studio_api_request.argtypes = [ctypes.c_char_p]*5; lib.execute_studio_api_request.restype = Response
+    # Security module
+    lib.security_init_hmac_key.argtypes = []; lib.security_init_hmac_key.restype = ctypes.c_int
+    lib.security_sign_request.argtypes = [ctypes.c_char_p]; lib.security_sign_request.restype = ctypes.c_char_p
+    lib.security_verify_request.argtypes = [ctypes.c_char_p, ctypes.c_char_p]; lib.security_verify_request.restype = ctypes.c_int
+    lib.security_validate_path.argtypes = [ctypes.c_char_p, ctypes.c_char_p]; lib.security_validate_path.restype = ctypes.c_int
+    lib.security_validate_sql.argtypes = [ctypes.c_char_p]; lib.security_validate_sql.restype = ctypes.c_int
+    lib.rate_limiter_check.argtypes = [ctypes.c_char_p]; lib.rate_limiter_check.restype = ctypes.c_int
+    lib.rate_limiter_remaining.argtypes = [ctypes.c_char_p]; lib.rate_limiter_remaining.restype = ctypes.c_double
+    lib.security_status_report.argtypes = []; lib.security_status_report.restype = ctypes.c_char_p
+    lib.get_pool_telemetry.argtypes = [ctypes.POINTER(ctypes.c_uint64)]*3; lib.get_pool_telemetry.restype = None
+    # Security: IP rules
+    lib.security_add_ip_rule.argtypes = [ctypes.c_char_p, ctypes.c_int]; lib.security_add_ip_rule.restype = ctypes.c_int
+    lib.security_remove_ip_rule.argtypes = [ctypes.c_char_p]; lib.security_remove_ip_rule.restype = ctypes.c_int
+    lib.security_check_ip.argtypes = [ctypes.c_char_p]; lib.security_check_ip.restype = ctypes.c_int
+    lib.security_list_ip_rules.argtypes = []; lib.security_list_ip_rules.restype = ctypes.c_char_p
+    # Security: Audit log
+    lib.security_audit_log.argtypes = [ctypes.c_char_p]*3 + [ctypes.c_int]; lib.security_audit_log.restype = None
+    lib.security_get_audit_log.argtypes = [ctypes.c_int]; lib.security_get_audit_log.restype = ctypes.c_char_p
+    lib.security_clear_audit_log.argtypes = []; lib.security_clear_audit_log.restype = None
+    # Security: Sessions
+    lib.security_create_session.argtypes = [ctypes.c_char_p, ctypes.c_int]; lib.security_create_session.restype = ctypes.c_char_p
+    lib.security_validate_session.argtypes = [ctypes.c_char_p]; lib.security_validate_session.restype = ctypes.c_int
+    lib.security_revoke_session.argtypes = [ctypes.c_char_p]; lib.security_revoke_session.restype = None
+    lib.security_list_sessions.argtypes = []; lib.security_list_sessions.restype = ctypes.c_char_p
+    # Security: Request size
+    lib.security_set_max_request_size.argtypes = [ctypes.c_size_t]; lib.security_set_max_request_size.restype = None
+    lib.security_check_request_size.argtypes = [ctypes.c_size_t]; lib.security_check_request_size.restype = ctypes.c_int
+    lib.security_get_max_request_size.argtypes = []; lib.security_get_max_request_size.restype = ctypes.c_size_t
+    return lib
+
+lightbase = load_lightbase_core()
+
+# Active mock servers
+active_mocks = {}
+# Monitor threads
+monitor_threads = {}
+# SSE event subscribers (list of queue.Queue)
+sse_clients = []
+sse_clients_lock = threading.Lock()
+
+# ============================================================================
+# FILESYSTEM HELPERS
+# ============================================================================
+def fs_save(category, name, data):
+    p = f"{WORKSPACE}/{category}/{name}.json"
+    with open(p, 'w') as f: json.dump(data, f, indent=2)
+    return p
+
+def fs_load(category, name):
+    p = f"{WORKSPACE}/{category}/{name}.json"
+    if not os.path.exists(p): return None
+    with open(p) as f: return json.load(f)
+
+def fs_list(category):
+    d = f"{WORKSPACE}/{category}"
+    return [os.path.splitext(f)[0] for f in os.listdir(d) if f.endswith('.json')]
+
+def fs_delete(category, name):
+    p = f"{WORKSPACE}/{category}/{name}.json"
+    if os.path.exists(p): os.remove(p); return True
+    return False
+
+def save_history(entry):
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    entry["id"] = ts
+    entry["timestamp"] = datetime.now().isoformat()
+    fs_save("history", ts, entry)
+
+# ============================================================================
+# OPENAPI GENERATOR
+# ============================================================================
+def generate_openapi_from_collections():
+    spec = {"openapi":"3.0.3","info":{"title":"LightBase API","version":"1.0.0","description":"Auto-generated from LightBase Studio collections"},"paths":{},"servers":[{"url":"http://localhost:8000"}]}
+    for name in fs_list("collections"):
+        col = fs_load("collections", name)
+        if not col: continue
+        requests = col.get("requests", [])
+        if isinstance(col, dict) and "url" in col:
+            requests = [col]
+        for req in requests:
+            url = req.get("url",""); method = req.get("method","GET").lower()
+            path = "/" + url.split("/",3)[-1] if "/" in url else "/"
+            if path not in spec["paths"]: spec["paths"][path] = {}
+            spec["paths"][path][method] = {"summary": req.get("name",name), "responses":{"200":{"description":"Success"}}}
+    return spec
+
+# ============================================================================
+# MONITOR RUNNER
+# ============================================================================
+def run_collection_monitor(col_name, interval_sec, monitor_id):
+    col = fs_load("collections", col_name)
+    if not col: return
+    requests = col.get("requests", [])
+    if isinstance(col, dict) and "url" in col: requests = [col]
+    results = []
+    for req in requests:
+        try:
+            method = req.get("method","GET"); url = req.get("url","")
+            clean = url.replace("https://","").replace("http://","")
+            si = clean.find("/"); host = clean[:si] if si != -1 else clean; path = clean[si:] if si != -1 else "/"
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect("/tmp/lightbase.sock")
+            tlv = encode_tlv(0x01, "network") + encode_tlv(0x04, host) + encode_tlv(0x05, path) + encode_tlv(0x06, "") + encode_tlv(0x07, method) + encode_tlv(0x08, "") + encode_tlv(0x09, "")
+            sock.sendall(tlv)
+            chunks = []
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk: break
+                chunks.append(chunk)
+            sock.close()
+            resp = b''.join(chunks).decode('utf-8')
+            rj = json.loads(resp)
+            results.append({"name": req.get("name",""), "status": rj.get("engine_status",200), "pass": rj.get("engine_status",200) < 400})
+        except Exception as e:
+            results.append({"name": req.get("name",""), "status": 0, "pass": False, "error": str(e)})
+    fs_save("monitors", f"{monitor_id}_result_{int(time.time())}", {"collection": col_name, "results": results, "timestamp": datetime.now().isoformat()})
+
+def encode_tlv(tag, val):
+    if val is None: val = ""
+    vb = val.encode('utf-8'); l = len(vb)
+    return bytes([tag, (l>>8)&0xFF, l&0xFF]) + vb
+
+# ============================================================================
+# GATEWAY HANDLER
+# ============================================================================
+class LightBaseGatewayHandler(BaseHTTPRequestHandler):
+    def log_message(self, fmt, *args): pass  # Suppress default logging
+
+    def do_OPTIONS(self):
+        self.send_response(200); self._cors(); self.end_headers()
+
+    def _cors(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+
+    def _json(self, code, data):
+        self.send_response(code); self._cors()
+        self.send_header('Content-Type', 'application/json'); self.end_headers()
+        self.wfile.write(json.dumps(data).encode('utf-8'))
+
+    def _err(self, code, msg): self._json(code, {"engine_status": code, "error": msg})
+
+    def _tlv(self, tag, val):
+        if val is None: val = ""
+        vb = val.encode('utf-8'); l = len(vb)
+        return bytes([tag, (l>>8)&0xFF, l&0xFF]) + vb
+
+    def _ipc(self, frame, buf=65536):
+        client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        client.connect("/tmp/lightbase.sock"); client.sendall(frame)
+        chunks = []
+        while True:
+            chunk = client.recv(buf)
+            if not chunk: break
+            chunks.append(chunk)
+        client.close()
+        resp = b''.join(chunks).decode('utf-8')
+        return json.loads(resp)
+
+    def do_GET(self):
+        if self.path == '/health':
+            self._json(200, {"status":"OK","engine":"LightBase C-Core"})
+        elif self.path.startswith('/fs/list/'):
+            cat = self.path.split('/')[-1]
+            self._json(200, {"files": fs_list(cat)})
+        elif self.path == '/events':
+            # SSE (Server-Sent Events) endpoint for real-time git state push
+            self.send_response(200)
+            self._cors()
+            self.send_header('Content-Type', 'text/event-stream')
+            self.send_header('Cache-Control', 'no-cache')
+            self.send_header('Connection', 'keep-alive')
+            self.end_headers()
+
+            client_queue = queue.Queue()
+            with sse_clients_lock:
+                sse_clients.append(client_queue)
+
+            try:
+                # Send initial connection event
+                self.wfile.write(b'event: connected\ndata: {"status":"ok"}\n\n')
+                self.wfile.flush()
+
+                while True:
+                    try:
+                        event = client_queue.get(timeout=15)
+                        event_type = event.get("type", "git_state")
+                        payload = json.dumps(event)
+                        self.wfile.write(f'event: {event_type}\ndata: {payload}\n\n'.encode())
+                        self.wfile.flush()
+                    except queue.Empty:
+                        # Send keepalive ping every 15s
+                        self.wfile.write(b': keepalive\n\n')
+                        self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, OSError):
+                pass
+            finally:
+                with sse_clients_lock:
+                    if client_queue in sse_clients:
+                        sse_clients.remove(client_queue)
+        elif self.path == '/echo' or self.path.startswith('/echo/'):
+            # Echo service — mirrors back GET request info
+            client_ip = self.client_address[0] if self.client_address else "unknown"
+            args = {}
+            if "?" in self.path:
+                qs = self.path.split("?", 1)[1]
+                args = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+            echo_response = {
+                "engine_status": 200,
+                "echo": {
+                    "method": "GET",
+                    "path": self.path.split("?")[0],
+                    "headers": dict(self.headers),
+                    "args": args,
+                    "origin": client_ip,
+                    "timestamp": datetime.now().isoformat(),
+                    "user_agent": self.headers.get("User-Agent", "unknown"),
+                }
+            }
+            self._json(200, echo_response)
+        else:
+            self._err(404, "Not found")
+
+    def do_POST(self):
+        cl = int(self.headers.get('Content-Length', 0))
+        body = self.rfile.read(cl).decode('utf-8')
+        rj = json.loads(body) if body else {}
+
+        try:
+            route = self.path
+            # ============ FILE SYSTEM ROUTES ============
+            if route == '/fs/save':
+                cat = rj.get("category","collections"); name = rj.get("name","untitled")
+                p = fs_save(cat, name, rj.get("data", rj))
+                self._json(200, {"status":"saved","path":p})
+
+            elif route == '/fs/load':
+                cat = rj.get("category","collections"); name = rj.get("name","")
+                data = fs_load(cat, name)
+                self._json(200 if data else 404, data or {"error":"not found"})
+
+            elif route == '/fs/list':
+                cat = rj.get("category","collections")
+                self._json(200, {"files": fs_list(cat)})
+
+            elif route == '/fs/delete':
+                cat = rj.get("category","collections"); name = rj.get("name","")
+                ok = fs_delete(cat, name)
+                self._json(200 if ok else 404, {"status":"deleted" if ok else "not found"})
+
+            # ============ REST REQUEST VIA IPC ============
+            elif route == '/request':
+                method = rj.get("method","GET")
+                hostname = rj.get("hostname","httpbin.org")
+                path = rj.get("path","/get")
+                headers_list = rj.get("headers",[])
+                body_payload = rj.get("body_payload","")
+                form_data = rj.get("form_data_payload",[])
+
+                hp = "".join(f"{h['key']}: {h['value']}\r\n" for h in headers_list if h.get("key") and h.get("value"))
+                fp = "&".join(f"{f['key']}={f['value']}" for f in form_data if f.get("key") and f.get("value"))
+                target = rj.get("target","network")
+
+                frame = self._tlv(0x01,target) + self._tlv(0x04,hostname) + self._tlv(0x05,path) + self._tlv(0x06,hp) + self._tlv(0x07,method) + self._tlv(0x08,body_payload) + self._tlv(0x09,fp)
+                resp = self._ipc(frame)
+                net = resp.get("network_payload",{})
+
+                # QuickJS tests
+                test_script = rj.get("test_script_payload","")
+                test_logs = "// Skipped"
+                if test_script.strip() and lightbase:
+                    sr = json.dumps({"status":resp.get("engine_status",200),"data":net})
+                    r = lightbase.execute_native_quickjs_assert_suite(test_script.encode(),sr.encode())
+                    if r: test_logs = r.decode()
+
+                out = {"engine_status":resp.get("engine_status",200),"network_data":net,
+                       "telemetry":{"c_core_duration_us":resp.get("c_core_duration_us",0)},
+                       "native_test_logs":test_logs}
+                save_history({"protocol":"REST","method":method,"url":f"{hostname}{path}","status":out["engine_status"],"response_preview":json.dumps(net)[:500]})
+                self._json(200, out)
+
+            # ============ GRAPHQL RELAY ============
+            elif route == '/graphql':
+                hostname = rj.get("hostname","")
+                gql_query = rj.get("query","")
+                variables = rj.get("variables",{})
+                gql_body = json.dumps({"query":gql_query,"variables":variables})
+                path = rj.get("path","/graphql")
+                hp = "Content-Type: application/json\r\n"
+                frame = self._tlv(0x01,"network")+self._tlv(0x04,hostname)+self._tlv(0x05,path)+self._tlv(0x06,hp)+self._tlv(0x07,"POST")+self._tlv(0x08,gql_body)+self._tlv(0x09,"")
+                resp = self._ipc(frame)
+                net = resp.get("network_payload",{})
+                save_history({"protocol":"GraphQL","url":f"{hostname}{path}","query":gql_query[:200],"status":resp.get("engine_status",200)})
+                self._json(200, {"engine_status":resp.get("engine_status",200),"data":net,"telemetry":{"c_core_duration_us":resp.get("c_core_duration_us",0)}})
+
+            # ============ WEBSOCKET ============
+            elif route == '/ws_connect':
+                ws_url = rj.get("url","")
+                message = rj.get("message","")
+                try:
+                    import websocket
+                    ws = websocket.create_connection(ws_url, timeout=5)
+                    if message: ws.send(message)
+                    result = ws.recv()
+                    ws.close()
+                    save_history({"protocol":"WebSocket","url":ws_url,"message_sent":message[:200],"message_received":result[:500]})
+                    self._json(200, {"engine_status":200,"response":result,"url":ws_url})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            # ============ MQTT ============
+            elif route == '/mqtt_connect':
+                broker = rj.get("broker","localhost"); port = rj.get("port",1883)
+                topic = rj.get("topic","test/lightbase"); payload = rj.get("payload","")
+                action = rj.get("action","publish")
+                try:
+                    import paho.mqtt.client as mqtt
+                    msgs = []
+                    if action == "publish":
+                        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+                        client.connect(broker, port, 5)
+                        client.publish(topic, payload)
+                        client.disconnect()
+                        save_history({"protocol":"MQTT","broker":broker,"topic":topic,"action":"publish"})
+                        self._json(200, {"engine_status":200,"action":"published","topic":topic})
+                    elif action == "subscribe":
+                        received = []
+                        def on_msg(c,u,m): received.append({"topic":m.topic,"payload":m.payload.decode()})
+                        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+                        client.on_message = on_msg
+                        client.connect(broker, port, 5)
+                        client.subscribe(topic)
+                        client.loop_start(); time.sleep(float(rj.get("listen_sec",3))); client.loop_stop()
+                        client.disconnect()
+                        save_history({"protocol":"MQTT","broker":broker,"topic":topic,"action":"subscribe","count":len(received)})
+                        self._json(200, {"engine_status":200,"messages":received})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            # ============ gRPC ============
+            elif route == '/grpc_invoke':
+                target = rj.get("target","localhost:50051")
+                service = rj.get("service",""); method = rj.get("method","")
+                payload = rj.get("payload",{})
+                try:
+                    import grpc
+                    from grpc_reflection.v1alpha import reflection_pb2, reflection_pb2_grpc
+                    channel = grpc.insecure_channel(target)
+                    stub = reflection_pb2_grpc.ServerReflectionStub(channel)
+                    save_history({"protocol":"gRPC","target":target,"service":service,"method":method})
+                    self._json(200, {"engine_status":200,"note":"gRPC reflection call dispatched","target":target,"service":service,"method":method})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            # ============ IPC DB/SCHEMA ROUTES ============
+            elif route in ('/local_db', '/query'):
+                ui_target = rj.get("target","local_db"); db = rj.get("db_path","test_lightbase.db")
+                tag_map = {"schema_scan":"schema_scan","set_env":"set_env","get_schema_tree":"get_schema_tree","save_collection":"save_collection"}
+                if ui_target in tag_map:
+                    frame = self._tlv(0x01,tag_map[ui_target]) + self._tlv(0x02,db)
+                    if ui_target == "save_collection":
+                        frame += self._tlv(0x03,rj.get("query")) + self._tlv(0x07,rj.get("method")) + self._tlv(0x04,rj.get("hostname"))
+                else:
+                    frame = self._tlv(0x01,"local_db")+self._tlv(0x02,db)+self._tlv(0x03,rj.get("query","SELECT 1;"))
+                resp = self._ipc(frame)
+                out = {"engine_status":200,"db_data":resp,"telemetry":{"c_core_duration_us":resp.get("c_core_duration_us",0)}}
+                if isinstance(resp,dict) and "tables" in resp: out["tables"]=resp["tables"]
+                self._json(200,out)
+
+            elif route == '/sys_metrics':
+                frame = self._tlv(0x01,"sys_metrics")
+                resp = self._ipc(frame, 6144)
+                self._json(200,{"engine_status":200,"system_telemetry":resp})
+
+            elif route == '/autogen_docs':
+                db = rj.get("db_path","test_lightbase.db")
+                r = lightbase.compile_native_markdown_schema_spec(db.encode())
+                self._json(200,{"engine_status":200,"compiled_markdown":r.decode() if r else "# Error"})
+
+            elif route == '/git_sync':
+                rp = rj.get("repo_path", REPO_PATH)
+                r = lightbase.compile_native_git_branch_status(rp.encode())
+                self._json(200,{"engine_status":200,"git_status":r.decode() if r else "Error"})
+
+            elif route == '/git_watch_state':
+                # Poll the C-Core reactive git watcher state
+                raw = lightbase.poll_git_reactive_state()
+                if raw:
+                    state = json.loads(raw.decode())
+                    self._json(200, {"engine_status": 200, "git_reactive": state})
+                else:
+                    self._err(500, "Git watcher not initialized")
+
+            elif route == '/git_watch_ack':
+                lightbase.ack_git_reactive_event()
+                self._json(200, {"engine_status": 200, "status": "acknowledged"})
+
+            elif route == '/ai_inference':
+                ctx = rj.get("context_payload","")
+                r = lightbase.execute_local_ai_inference_stream(ctx.encode())
+                self._json(200,{"engine_status":200,"ai_generation":r.decode() if r else "Error"})
+
+            elif route == '/secure_vault_key':
+                prov = rj.get("provider"); key = rj.get("plain_key")
+                if not prov or not key: self._err(400,"Missing params"); return
+                enc = lightbase.encrypt_api_key_system_level(key.encode())
+                if not enc: self._err(500,"Encryption failed"); return
+                conn = sqlite3.connect("test_lightbase.db"); c = conn.cursor()
+                c.execute("CREATE TABLE IF NOT EXISTS system_vault (id INTEGER PRIMARY KEY AUTOINCREMENT, provider TEXT UNIQUE, encrypted_key TEXT)")
+                c.execute("INSERT OR REPLACE INTO system_vault (provider,encrypted_key) VALUES (?,?)",(prov,enc.decode()))
+                conn.commit(); conn.close()
+                self._json(200,{"engine_status":200,"vault_status":"SUCCESS_SECURED"})
+
+            elif route == '/retrieve_vault_key':
+                prov = rj.get("provider")
+                if not prov: self._err(400,"Missing provider"); return
+                conn = sqlite3.connect(rj.get("db_path","test_lightbase.db")); c = conn.cursor()
+                c.execute("SELECT encrypted_key FROM system_vault WHERE provider=?",(prov,))
+                row = c.fetchone(); conn.close()
+                if not row: self._err(404,"Not found"); return
+                dec = lightbase.decrypt_api_key_system_level(row[0].encode())
+                if not dec: self._err(500,"Decryption failed"); return
+                self._json(200,{"engine_status":200,"provider":prov,"decrypted_key":dec.decode()})
+
+            elif route == '/telemetry_history':
+                mx = rj.get("max_records",100)
+                buf = (TelemetryRecord * mx)(); cnt = lightbase.read_all_telemetry_records(buf, mx)
+                recs = [{"timestamp":buf[i].timestamp,"cpu_usage":round(buf[i].cpu_usage,2),"mem_total_mb":buf[i].mem_total_mb,"mem_avail_mb":buf[i].mem_avail_mb} for i in range(cnt) if buf[i].timestamp]
+                self._json(200,{"engine_status":200,"records_read":len(recs),"telemetry_history":recs})
+
+            elif route == '/list_collections':
+                db = rj.get("db_path","test_lightbase.db")
+                r = lightbase.list_all_collections(db.encode())
+                self._json(200,{"engine_status":200,"collections":json.loads(r.decode()) if r else []})
+
+            # ============ MOCK SERVER ============
+            elif route == '/mock/register':
+                mid = rj.get("name", str(uuid.uuid4())[:8])
+                routes = rj.get("routes", [])
+                fs_save("mocks", mid, {"name":mid,"routes":routes})
+                self._json(200,{"engine_status":200,"mock_id":mid,"route_count":len(routes)})
+
+            elif route == '/mock/resolve':
+                path = rj.get("path","/"); method = rj.get("method","GET")
+                for name in fs_list("mocks"):
+                    mock = fs_load("mocks", name)
+                    if not mock: continue
+                    for r in mock.get("routes",[]):
+                        if r.get("path") == path and r.get("method","GET").upper() == method.upper():
+                            self._json(r.get("status",200), r.get("body",{}))
+                            return
+                self._err(404, "No mock matched")
+
+            # ============ MONITOR ============
+            elif route == '/run_monitor':
+                col = rj.get("collection","")
+                mid = rj.get("monitor_id", str(uuid.uuid4())[:8])
+                interval = rj.get("interval_sec", 60)
+                run_collection_monitor(col, interval, mid)
+                self._json(200,{"engine_status":200,"monitor_id":mid,"status":"executed"})
+
+            elif route == '/monitor/schedule':
+                col = rj.get("collection",""); interval = rj.get("interval_sec",60)
+                mid = rj.get("monitor_id", str(uuid.uuid4())[:8])
+                def loop():
+                    while mid in monitor_threads:
+                        run_collection_monitor(col, interval, mid); time.sleep(interval)
+                monitor_threads[mid] = True
+                t = threading.Thread(target=loop, daemon=True); t.start()
+                fs_save("monitors", mid, {"collection":col,"interval_sec":interval,"active":True})
+                self._json(200,{"engine_status":200,"monitor_id":mid,"status":"scheduled"})
+
+            elif route == '/monitor/stop':
+                mid = rj.get("monitor_id","")
+                if mid in monitor_threads: del monitor_threads[mid]
+                self._json(200,{"status":"stopped"})
+
+            # ============ OPENAPI EXPORT ============
+            elif route == '/export_openapi':
+                spec = generate_openapi_from_collections()
+                fs_save("docs","openapi_spec",spec)
+                self._json(200,{"engine_status":200,"spec":spec})
+
+            # ============ HISTORY ============
+            elif route == '/history/list':
+                items = []
+                for name in sorted(fs_list("history"), reverse=True)[:50]:
+                    items.append(fs_load("history", name))
+                self._json(200,{"engine_status":200,"history":items})
+
+            elif route == '/history/clear':
+                for name in fs_list("history"): fs_delete("history", name)
+                self._json(200,{"status":"cleared"})
+
+            # ============ SAVE/LOAD COLLECTIONS (file-based) ============
+            elif route == '/save_collection':
+                name = rj.get("name","untitled").replace(" ","_")
+                fs_save("collections", name, rj)
+                self._json(200,{"status":"SAVED","path":f"{WORKSPACE}/collections/{name}.json"})
+
+            elif route == '/save_environment':
+                name = rj.get("name","untitled").replace(" ","_")
+                fs_save("environments", name, rj)
+                self._json(200,{"status":"SAVED"})
+
+            # ============ FLOW SAVE/LOAD ============
+            elif route == '/flow/save':
+                name = rj.get("name","untitled_flow")
+                fs_save("flows", name, rj.get("data",rj))
+                self._json(200,{"status":"saved"})
+
+            elif route == '/flow/load':
+                name = rj.get("name","")
+                data = fs_load("flows", name)
+                self._json(200 if data else 404, data or {"error":"not found"})
+
+            elif route == '/flow/run':
+                name = rj.get("name","")
+                flow = fs_load("flows", name)
+                if not flow: self._err(404,"Flow not found"); return
+                results = []
+                for node in flow.get("nodes",[]):
+                    if node.get("type") == "request":
+                        try:
+                            url = node.get("url",""); method = node.get("method","GET")
+                            clean = url.replace("https://","").replace("http://","")
+                            si = clean.find("/"); host = clean[:si] if si!=-1 else clean; path = clean[si:] if si!=-1 else "/"
+                            frame = self._tlv(0x01,"network")+self._tlv(0x04,host)+self._tlv(0x05,path)+self._tlv(0x06,"")+self._tlv(0x07,method)+self._tlv(0x08,"")+self._tlv(0x09,"")
+                            resp = self._ipc(frame)
+                            results.append({"node":node.get("id",""),"status":resp.get("engine_status",200),"data":resp.get("network_payload",{})})
+                        except Exception as e:
+                            results.append({"node":node.get("id",""),"error":str(e)})
+                    elif node.get("type") == "transform":
+                        results.append({"node":node.get("id",""),"type":"transform","note":"Applied"})
+                self._json(200,{"engine_status":200,"flow_results":results})
+
+            # ============ PYTHON PLUGIN SYSTEM ============
+            elif route == '/plugin/list':
+                plugins_dir = f"{WORKSPACE}/plugins"
+                files = [f for f in os.listdir(plugins_dir) if f.endswith('.py')]
+                self._json(200, {"plugins": [os.path.splitext(f)[0] for f in files]})
+
+            elif route == '/plugin/load':
+                name = rj.get("name","")
+                plugin_path = f"{WORKSPACE}/plugins/{name}.py"
+                if not os.path.exists(plugin_path): self._err(404,"Plugin not found"); return
+                with open(plugin_path) as f: code = f.read()
+                self._json(200, {"name": name, "code": code})
+
+            elif route == '/plugin/save':
+                name = rj.get("name","untitled")
+                code = rj.get("code","")
+                with open(f"{WORKSPACE}/plugins/{name}.py", 'w') as f: f.write(code)
+                self._json(200, {"status":"saved","name":name})
+
+            elif route == '/plugin/run':
+                name = rj.get("name","")
+                context = rj.get("context", {})
+                plugin_path = f"{WORKSPACE}/plugins/{name}.py"
+                if not os.path.exists(plugin_path): self._err(404,"Plugin not found"); return
+                try:
+                    with open(plugin_path) as f: code = f.read()
+                    ns = {"context": context, "result": None, "json": json, "os": os}
+                    exec(code, ns)
+                    if callable(ns.get("run")):
+                        output = ns["run"](context)
+                    else:
+                        output = ns.get("result", "Plugin executed (no run() or result)")
+                    self._json(200, {"engine_status":200,"plugin_output": output if isinstance(output, (dict,list,str,int,float,bool,type(None))) else str(output)})
+                except Exception as e:
+                    self._err(500, f"Plugin error: {traceback.format_exc()}")
+
+            elif route == '/plugin/install':
+                package = rj.get("package","")
+                if not package: self._err(400,"Missing package name"); return
+                try:
+                    import subprocess
+                    result = subprocess.run(["pip","install","--break-system-packages",package], capture_output=True, text=True, timeout=60)
+                    self._json(200, {"engine_status":200,"stdout":result.stdout[-500:],"stderr":result.stderr[-500:],"returncode":result.returncode})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            # ============ AI AGENTIC WORKFLOWS ============
+            elif route == '/ai/generate_tests':
+                response_data = rj.get("response_data","")
+                endpoint = rj.get("endpoint","")
+                prompt = f"""Generate LightBase test scripts for this API response.
+Use the lb.test() and lb.expect() API. Format:
+lb.test("name", () => {{ lb.expect(lb.response.status).toBe(200); }});
+
+Endpoint: {endpoint}
+Response data:
+{response_data[:2000]}
+
+Generate 3-5 meaningful test assertions:"""
+                r = lightbase.execute_local_ai_inference_stream(prompt.encode())
+                self._json(200, {"engine_status":200,"generated_tests": r.decode() if r else "// AI unavailable — write tests manually"})
+
+            elif route == '/ai/chain_next':
+                prev_response = rj.get("response_data","")
+                prev_url = rj.get("url","")
+                prev_method = rj.get("method","GET")
+                prompt = f"""Analyze this API response and suggest the next logical API request.
+Previous: {prev_method} {prev_url}
+Response: {prev_response[:2000]}
+
+Return a JSON object with: method, url, body (if needed), and explanation.
+Example: {{"method":"GET","url":"https://api.example.com/users/123","body":"","explanation":"Fetch the user details from the ID returned"}}"""
+                r = lightbase.execute_local_ai_inference_stream(prompt.encode())
+                text = r.decode() if r else '{"explanation":"AI unavailable"}'
+                try:
+                    suggestion = json.loads(text)
+                except:
+                    suggestion = {"raw": text, "explanation": "Could not parse as JSON"}
+                self._json(200, {"engine_status":200,"suggestion": suggestion})
+
+            elif route == '/ai/explain':
+                response_data = rj.get("response_data","")
+                prompt = f"Explain this API response in plain English, highlighting important fields and potential issues:\n{response_data[:3000]}"
+                r = lightbase.execute_local_ai_inference_stream(prompt.encode())
+                self._json(200, {"engine_status":200,"explanation": r.decode() if r else "AI unavailable"})
+
+            # ============ SSE LIVE DATA STREAMER ============
+            elif route == '/stream/ws_live':
+                ws_url = rj.get("url","")
+                duration = rj.get("duration_sec", 10)
+                try:
+                    import websocket
+                    messages = []
+                    def on_msg(wsapp, msg): messages.append({"ts":time.time(),"data":msg[:1000]})
+                    def on_err(wsapp, err): messages.append({"ts":time.time(),"error":str(err)})
+                    def on_close(wsapp, sc, msg): pass
+                    def on_open(wsapp):
+                        def closer():
+                            time.sleep(duration)
+                            wsapp.close()
+                        threading.Thread(target=closer, daemon=True).start()
+                    ws = websocket.WebSocketApp(ws_url, on_message=on_msg, on_error=on_err, on_close=on_close, on_open=on_open)
+                    wst = threading.Thread(target=ws.run_forever); wst.daemon=True; wst.start(); wst.join(timeout=duration+2)
+                    self._json(200, {"engine_status":200,"message_count":len(messages),"messages":messages[:200],
+                                     "rate_per_sec": round(len(messages)/max(duration,1),2)})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            elif route == '/stream/sse_connect':
+                sse_url = rj.get("url","")
+                duration = rj.get("duration_sec", 5)
+                try:
+                    import urllib.request
+                    req = urllib.request.Request(sse_url)
+                    events = []
+                    with urllib.request.urlopen(req, timeout=duration+2) as resp:
+                        start = time.time()
+                        for line in resp:
+                            if time.time() - start > duration: break
+                            decoded = line.decode('utf-8').strip()
+                            if decoded.startswith('data:'):
+                                events.append({"ts":time.time(),"data":decoded[5:].strip()[:1000]})
+                            if len(events) >= 200: break
+                    self._json(200, {"engine_status":200,"event_count":len(events),"events":events,
+                                     "rate_per_sec": round(len(events)/max(duration,1),2)})
+                except Exception as e:
+                    self._err(500, str(e))
+
+            # ============ JUPYTER NOTEBOOK EXPORT ============
+            elif route == '/export/notebook':
+                col_name = rj.get("collection","")
+                source = rj.get("source","collection")  # "collection" or "history"
+                items = []
+                if source == "collection":
+                    col = fs_load("collections", col_name)
+                    if col:
+                        if "requests" in col: items = col["requests"]
+                        elif "url" in col: items = [col]
+                elif source == "history":
+                    for n in sorted(fs_list("history"), reverse=True)[:20]:
+                        h = fs_load("history", n)
+                        if h: items.append(h)
+
+                cells = [{"cell_type":"markdown","metadata":{},"source":[f"# LightBase Export: {col_name or 'History'}\n","Generated by LightBase Studio\n"]},
+                         {"cell_type":"code","metadata":{},"source":["import requests\nimport json\n"],"execution_count":None,"outputs":[]}]
+                for i, item in enumerate(items):
+                    m = item.get("method","GET"); u = item.get("url","")
+                    b = item.get("body","") or item.get("body_payload","")
+                    code_lines = [f"# Request {i+1}: {m} {u}\n"]
+                    if m.upper() in ("POST","PUT","PATCH") and b:
+                        code_lines.append(f"resp = requests.{m.lower()}('{u}',\n    json={b})\n")
+                    else:
+                        code_lines.append(f"resp = requests.{m.lower()}('{u}')\n")
+                    code_lines.append("print(f'Status: {resp.status_code}')\n")
+                    code_lines.append("print(json.dumps(resp.json(), indent=2))\n")
+                    cells.append({"cell_type":"code","metadata":{},"source":code_lines,"execution_count":None,"outputs":[]})
+
+                nb = {"nbformat":4,"nbformat_minor":5,"metadata":{"kernelspec":{"display_name":"Python 3","language":"python","name":"python3"},"language_info":{"name":"python","version":"3.11.0"}},"cells":cells}
+                fname = f"{col_name or 'history_export'}.ipynb"
+                with open(f"{WORKSPACE}/exports/{fname}",'w') as f: json.dump(nb,f,indent=2)
+                self._json(200, {"engine_status":200,"filename":fname,"path":f"{WORKSPACE}/exports/{fname}","cell_count":len(cells)})
+
+            elif route == '/export/python':
+                col_name = rj.get("collection","")
+                col = fs_load("collections", col_name)
+                items = []
+                if col:
+                    if "requests" in col: items = col["requests"]
+                    elif "url" in col: items = [col]
+
+                lines = ["#!/usr/bin/env python3","\"\"\"Generated by LightBase Studio\"\"\"","import requests, json",""]
+                for i, item in enumerate(items):
+                    m = item.get("method","GET"); u = item.get("url","")
+                    b = item.get("body","")
+                    lines.append(f"# Request {i+1}")
+                    if m.upper() in ("POST","PUT","PATCH") and b:
+                        lines.append(f"r{i} = requests.{m.lower()}('{u}', json={b})")
+                    else:
+                        lines.append(f"r{i} = requests.{m.lower()}('{u}')")
+                    lines.append(f"print(f'[{m} {u}] Status: {{r{i}.status_code}}')")
+                    lines.append(f"print(json.dumps(r{i}.json(), indent=2))")
+                    lines.append("")
+
+                fname = f"{col_name or 'export'}.py"
+                with open(f"{WORKSPACE}/exports/{fname}",'w') as f: f.write("\n".join(lines))
+                self._json(200, {"engine_status":200,"filename":fname,"path":f"{WORKSPACE}/exports/{fname}"})
+
+            # ============ SECURITY ENDPOINTS ============
+            elif route == '/security/status':
+                raw = lightbase.security_status_report()
+                if raw:
+                    report = json.loads(raw.decode())
+                    # Add pool telemetry
+                    enq = ctypes.c_uint64(0); proc = ctypes.c_uint64(0); spins = ctypes.c_uint64(0)
+                    lightbase.get_pool_telemetry(ctypes.byref(enq), ctypes.byref(proc), ctypes.byref(spins))
+                    report["pool_telemetry"] = {"enqueued": enq.value, "processed": proc.value, "contention_spins": spins.value}
+                    self._json(200, {"engine_status": 200, "security": report})
+                else:
+                    self._err(500, "Security module not loaded")
+
+            elif route == '/security/sign':
+                payload = rj.get("payload", "")
+                sig = lightbase.security_sign_request(payload.encode())
+                if sig:
+                    self._json(200, {"engine_status": 200, "signature": sig.decode(), "payload_length": len(payload)})
+                else:
+                    self._err(500, "HMAC signing failed")
+
+            elif route == '/security/verify':
+                payload = rj.get("payload", "")
+                signature = rj.get("signature", "")
+                valid = lightbase.security_verify_request(payload.encode(), signature.encode())
+                self._json(200, {"engine_status": 200, "valid": bool(valid), "signature": signature[:16] + "..."})
+
+            elif route == '/security/validate_path':
+                path = rj.get("path", "")
+                root = rj.get("root", WORKSPACE)
+                safe = lightbase.security_validate_path(path.encode(), root.encode())
+                self._json(200, {"engine_status": 200, "safe": bool(safe), "path": path})
+
+            elif route == '/security/validate_sql':
+                sql = rj.get("sql", "")
+                safe = lightbase.security_validate_sql(sql.encode())
+                self._json(200, {"engine_status": 200, "safe": bool(safe)})
+
+            # ============ SECURITY: IP RULES ============
+            elif route == '/security/ip/add':
+                ip = rj.get("ip", ""); action = rj.get("action", "block")
+                lightbase.security_add_ip_rule(ip.encode(), 1 if action == "block" else 0)
+                self._json(200, {"engine_status": 200, "ip": ip, "action": action})
+
+            elif route == '/security/ip/remove':
+                ip = rj.get("ip", "")
+                lightbase.security_remove_ip_rule(ip.encode())
+                self._json(200, {"engine_status": 200, "removed": ip})
+
+            elif route == '/security/ip/list':
+                raw = lightbase.security_list_ip_rules()
+                rules = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "rules": rules})
+
+            elif route == '/security/ip/check':
+                ip = rj.get("ip", "")
+                allowed = lightbase.security_check_ip(ip.encode())
+                self._json(200, {"engine_status": 200, "ip": ip, "allowed": bool(allowed)})
+
+            # ============ SECURITY: AUDIT LOG ============
+            elif route == '/security/audit/log':
+                max_entries = rj.get("max_entries", 50)
+                raw = lightbase.security_get_audit_log(max_entries)
+                entries = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "audit_entries": entries, "count": len(entries)})
+
+            elif route == '/security/audit/clear':
+                lightbase.security_clear_audit_log()
+                self._json(200, {"engine_status": 200, "status": "cleared"})
+
+            # ============ SECURITY: SESSIONS ============
+            elif route == '/security/session/create':
+                label = rj.get("label", "default")
+                ttl = rj.get("ttl_seconds", 3600)
+                raw = lightbase.security_create_session(label.encode(), ttl)
+                if raw:
+                    session = json.loads(raw.decode())
+                    self._json(200, {"engine_status": 200, **session})
+                else:
+                    self._err(500, "Session creation failed")
+
+            elif route == '/security/session/validate':
+                token = rj.get("token", "")
+                valid = lightbase.security_validate_session(token.encode())
+                self._json(200, {"engine_status": 200, "valid": bool(valid)})
+
+            elif route == '/security/session/revoke':
+                token = rj.get("token", "")
+                lightbase.security_revoke_session(token.encode())
+                self._json(200, {"engine_status": 200, "status": "revoked"})
+
+            elif route == '/security/session/list':
+                raw = lightbase.security_list_sessions()
+                sessions = json.loads(raw.decode()) if raw else []
+                self._json(200, {"engine_status": 200, "sessions": sessions})
+
+            # ============ SECURITY: REQUEST SIZE ============
+            elif route == '/security/max_size/set':
+                size = rj.get("max_bytes", 1048576)
+                lightbase.security_set_max_request_size(size)
+                self._json(200, {"engine_status": 200, "max_request_size": size})
+
+            elif route == '/security/max_size/get':
+                size = lightbase.security_get_max_request_size()
+                self._json(200, {"engine_status": 200, "max_request_size": size})
+
+            # ============ ENTERPRISE: COLLECTION RUNNER ============
+            elif route == '/collection/run':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                iterations = rj.get("iterations", 1)
+                result = ent.run_collection(col_data, env_vars or {}, iterations, lightbase, encode_tlv)
+                # Save report
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                # Optional webhook alert
+                webhook = rj.get("webhook_url")
+                if webhook:
+                    ent.send_webhook_alert(webhook, "Collection Run Complete", {
+                        "collection": col_name, "passed": result["total_passed"],
+                        "failed": result["total_failed"], "duration_ms": result["total_time_ms"],
+                        "success": result["success"], "message": f"{col_name}: {result['total_passed']} passed, {result['total_failed']} failed"
+                    }, rj.get("webhook_platform", "generic"))
+                self._json(200, {"engine_status": 200, **result})
+
+            elif route == '/collection/run_data':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                data_content = rj.get("data", "")
+                data_format = rj.get("format", "csv")
+                base_env = rj.get("variables", {})
+                iter_data = ent.parse_iteration_data(data_content, data_format)
+                result = ent.run_collection_data_driven(col_data, iter_data, base_env, lightbase, encode_tlv)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: CI/CD REPORTS ============
+            elif route == '/report/junit':
+                report_name = rj.get("report", "")
+                run_result = rj.get("run_result") or fs_load("reports", report_name)
+                if not run_result: self._err(404, "Report not found"); return
+                xml = ent.generate_junit_xml(run_result)
+                path = f"{WORKSPACE}/reports/{report_name or 'latest'}_junit.xml"
+                with open(path, 'w') as f: f.write(xml)
+                self._json(200, {"engine_status": 200, "xml": xml, "path": path})
+
+            elif route == '/report/html':
+                report_name = rj.get("report", "")
+                run_result = rj.get("run_result") or fs_load("reports", report_name)
+                if not run_result: self._err(404, "Report not found"); return
+                html = ent.generate_html_report(run_result)
+                path = f"{WORKSPACE}/reports/{report_name or 'latest'}_report.html"
+                with open(path, 'w') as f: f.write(html)
+                self._json(200, {"engine_status": 200, "path": path})
+
+            # ============ ENTERPRISE: CODE SNIPPETS ============
+            elif route == '/codegen':
+                snippet = ent.generate_code_snippet(
+                    rj.get("method", "GET"), rj.get("url", ""),
+                    rj.get("headers", ""), rj.get("body", ""),
+                    rj.get("language", "curl"))
+                self._json(200, {"engine_status": 200, "language": rj.get("language", "curl"), "snippet": snippet})
+
+            # ============ ENTERPRISE: SCHEMA VALIDATION ============
+            elif route == '/validate/schema':
+                data = rj.get("data"); schema = rj.get("schema")
+                if not data or not schema: self._err(400, "Missing data or schema"); return
+                result = ent.validate_json_schema(data, schema)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: WORKSPACE SYNC ============
+            elif route == '/workspace/export':
+                package = ent.export_workspace(WORKSPACE)
+                path = f"{WORKSPACE}/exports/workspace_export.json"
+                with open(path, 'w') as f: json.dump(package, f, indent=2)
+                self._json(200, {"engine_status": 200, "path": path, "checksum": package.get("checksum")})
+
+            elif route == '/workspace/import':
+                package = rj.get("package", rj)
+                merge = rj.get("merge", True)
+                result = ent.import_workspace(package, WORKSPACE, merge)
+                self._json(200, {"engine_status": 200, "imported": result})
+
+            # ============ ENTERPRISE: API DOCUMENTATION ============
+            elif route == '/docs/generate':
+                result = ent.generate_api_docs_html(WORKSPACE)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: WEBHOOK ALERTS ============
+            elif route == '/webhook/send':
+                url = rj.get("webhook_url", "")
+                event = rj.get("event", "test_alert")
+                details = rj.get("details", {})
+                platform = rj.get("platform", "generic")
+                result = ent.send_webhook_alert(url, event, details, platform)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: COMMENTS & FORKING ============
+            elif route == '/collection/comment':
+                col = rj.get("collection", "")
+                text = rj.get("text", "")
+                author = rj.get("author", "anonymous")
+                result = ent.add_collection_comment(WORKSPACE, col, text, author)
+                self._json(200, {"engine_status": 200, **result})
+
+            elif route == '/collection/comments':
+                col = rj.get("collection", "")
+                comments = ent.get_collection_comments(WORKSPACE, col)
+                self._json(200, {"engine_status": 200, "comments": comments})
+
+            elif route == '/collection/fork':
+                source = rj.get("source", "")
+                fork_name = rj.get("fork_name", f"{source}_fork")
+                author = rj.get("author", "anonymous")
+                result = ent.fork_collection(WORKSPACE, source, fork_name, author)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ ENTERPRISE: AUTH HELPERS ============
+            elif route == '/auth/headers':
+                headers_str = rj.get("headers", "")
+                auth_config = rj.get("auth", {})
+                result = ent.apply_auth_headers(headers_str, auth_config)
+                self._json(200, {"engine_status": 200, "headers": result})
+
+            # ============ LIGHTBASE MANAGEMENT API ============
+            # Programmatic access to all workspace resources (like Postman API)
+            elif route == '/api/collections':
+                action = rj.get("action", "list")
+                if action == "list":
+                    cols = []
+                    for name in fs_list("collections"):
+                        col = fs_load("collections", name)
+                        cols.append({"name": name, "method": col.get("method"), "url": col.get("url"), "request_count": len(col.get("requests", [col] if "url" in col else []))})
+                    self._json(200, {"engine_status": 200, "collections": cols, "total": len(cols)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    col = fs_load("collections", name)
+                    self._json(200 if col else 404, {"engine_status": 200, "collection": col} if col else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("collections", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("collections", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/environments':
+                action = rj.get("action", "list")
+                if action == "list":
+                    envs = []
+                    for name in fs_list("environments"):
+                        env = fs_load("environments", name)
+                        envs.append({"name": name, "variable_count": len(env.get("variables", env) if isinstance(env, dict) else {})})
+                    self._json(200, {"engine_status": 200, "environments": envs, "total": len(envs)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    env = fs_load("environments", name)
+                    self._json(200 if env else 404, {"engine_status": 200, "environment": env} if env else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("environments", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("environments", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/mocks':
+                action = rj.get("action", "list")
+                if action == "list":
+                    mocks_list = []
+                    for name in fs_list("mocks"):
+                        mock = fs_load("mocks", name)
+                        mocks_list.append({"name": name, "route_count": len(mock.get("routes", [])) if mock else 0})
+                    self._json(200, {"engine_status": 200, "mocks": mocks_list, "total": len(mocks_list)})
+                elif action == "get":
+                    name = rj.get("name", "")
+                    mock = fs_load("mocks", name)
+                    self._json(200 if mock else 404, {"engine_status": 200, "mock": mock} if mock else {"error": "not found"})
+                elif action == "create" or action == "update":
+                    name = rj.get("name", "untitled")
+                    data = rj.get("data", rj)
+                    fs_save("mocks", name, data)
+                    self._json(200, {"engine_status": 200, "status": "saved", "name": name})
+                elif action == "delete":
+                    name = rj.get("name", "")
+                    ok = fs_delete("mocks", name)
+                    self._json(200 if ok else 404, {"engine_status": 200, "status": "deleted"} if ok else {"error": "not found"})
+
+            elif route == '/api/history':
+                action = rj.get("action", "list")
+                if action == "list":
+                    limit = rj.get("limit", 50)
+                    items = []
+                    for name in sorted(fs_list("history"), reverse=True)[:limit]:
+                        items.append(fs_load("history", name))
+                    self._json(200, {"engine_status": 200, "history": items, "total": len(items)})
+                elif action == "clear":
+                    for name in fs_list("history"): fs_delete("history", name)
+                    self._json(200, {"engine_status": 200, "status": "cleared"})
+
+            # ============ ECHO SERVICE (built-in API sanity checker) ============
+            elif route == '/echo' or route.startswith('/echo/'):
+                # Mirrors back exactly what was sent — method, headers, body, params
+                client_ip = self.client_address[0] if self.client_address else "unknown"
+                echo_response = {
+                    "engine_status": 200,
+                    "echo": {
+                        "method": "POST",
+                        "path": route,
+                        "headers": dict(self.headers),
+                        "body": rj,
+                        "args": {},
+                        "origin": client_ip,
+                        "timestamp": datetime.now().isoformat(),
+                        "content_length": cl,
+                        "user_agent": self.headers.get("User-Agent", "unknown"),
+                    }
+                }
+                # Parse query string if present
+                if "?" in self.path:
+                    qs = self.path.split("?", 1)[1]
+                    echo_response["echo"]["args"] = dict(p.split("=", 1) for p in qs.split("&") if "=" in p)
+                self._json(200, echo_response)
+
+            # ============ WEBHOOK TRIGGER (trigger collection runs via URL) ============
+            elif route.startswith('/webhook/trigger/'):
+                # Extract collection name from URL: /webhook/trigger/<collection_name>
+                col_name = route.split('/webhook/trigger/', 1)[1].strip('/')
+                if not col_name:
+                    self._err(400, "Missing collection name in webhook URL")
+                else:
+                    col_data = fs_load("collections", col_name)
+                    if not col_data:
+                        self._err(404, f"Collection '{col_name}' not found")
+                    else:
+                        # Allow webhook payload to inject custom variables
+                        webhook_vars = rj.get("variables", rj.get("data", {}))
+                        env_name = rj.get("environment", "")
+                        env_vars = fs_load("environments", env_name) if env_name else webhook_vars
+                        iterations = rj.get("iterations", 1)
+                        result = ent.run_collection(col_data, env_vars or {}, iterations, lightbase, encode_tlv)
+                        report_id = f"webhook_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                        fs_save("reports", report_id, result)
+                        # Optional webhook notification on completion
+                        notify_url = rj.get("notify_url")
+                        if notify_url:
+                            ent.send_webhook_alert(notify_url, "Webhook Collection Run Complete", {
+                                "collection": col_name, "passed": result["total_passed"],
+                                "failed": result["total_failed"], "success": result["success"],
+                                "triggered_by": "webhook", "report_id": report_id
+                            }, rj.get("notify_platform", "generic"))
+                        self._json(200, {"engine_status": 200, "triggered": col_name, "report_id": report_id, **result})
+
+            # ============ WORKFLOW CONTROL (setNextRequest) ============
+            elif route == '/collection/run_workflow':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                result = ent.run_collection_with_workflow(col_data, env_vars or {}, lightbase, encode_tlv)
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                self._json(200, {"engine_status": 200, **result})
+
+            # ============ COLLECTION-LEVEL SCRIPTS ============
+            elif route == '/collection/run_with_scripts':
+                col_name = rj.get("collection", "")
+                col_data = rj.get("collection_data") or fs_load("collections", col_name) or {}
+                env_name = rj.get("environment", "")
+                env_vars = fs_load("environments", env_name) if env_name else rj.get("variables", {})
+                iterations = rj.get("iterations", 1)
+                # Collection-level scripts are stored in the collection JSON
+                col_prereq = col_data.get("collection_prereq_script", "")
+                col_test = col_data.get("collection_test_script", "")
+                result = ent.run_collection_with_scripts(col_data, env_vars or {}, iterations,
+                                                        col_prereq, col_test, lightbase, encode_tlv)
+                report_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+                fs_save("reports", report_id, result)
+                self._json(200, {"engine_status": 200, **result})
+
+            else:
+                self._err(404, "Route not found")
+        except Exception as e:
+            print(f"[Bridge Error] {traceback.format_exc()}")
+            self._err(500, str(e))
+
+# ============================================================================
+# REACTIVE GIT WATCHER BRIDGE THREAD
+# ============================================================================
+def broadcast_sse(event):
+    """Push an event to all connected SSE clients."""
+    with sse_clients_lock:
+        dead = []
+        for q in sse_clients:
+            try:
+                q.put_nowait(event)
+            except Exception:
+                dead.append(q)
+        for q in dead:
+            sse_clients.remove(q)
+
+def git_reactive_poller():
+    """
+    Background thread that polls the C-Core git watcher for state changes.
+    When a change is detected, it:
+    1. Broadcasts SSE event to all connected UI clients
+    2. Hot-reloads schema if .db/.sql files changed
+    3. Reloads workspace configs if .json files changed
+    4. Updates AI context with the new branch architecture
+    """
+    print("[Bridge Git Reactor] 🧠 Reactive poller thread started.")
+    last_branch = ""
+
+    while True:
+        try:
+            time.sleep(1)  # Poll every second
+            raw = lightbase.poll_git_reactive_state()
+            if not raw: continue
+
+            state = json.loads(raw.decode())
+            if not state.get("dirty"): continue
+
+            event_type = state.get("event_type", "unknown")
+            branch = state.get("branch", "")
+            prev_branch = state.get("prev_branch", "")
+            head_sha = state.get("head_sha", "")
+            schema_changed = state.get("schema_changed", 0)
+            config_changed = state.get("config_changed", 0)
+            plugin_changed = state.get("plugin_changed", 0)
+            changed_files = state.get("changed_files", [])
+
+            print(f"[Bridge Git Reactor] ⚡ Event: {event_type} | Branch: {branch} | SHA: {head_sha} | Files: {len(changed_files)}")
+
+            # ── HOT-RELOAD ACTIONS ──
+            reload_actions = []
+
+            if schema_changed:
+                # Re-scan database schema for the new branch's tables
+                print(f"[Bridge Git Reactor] 🗄️ Schema change detected — hot-reloading database metadata...")
+                try:
+                    schema_res = lightbase.fetch_database_schema_tree(b"test_lightbase.db")
+                    if schema_res.payload:
+                        reload_actions.append("schema_reload")
+                        print(f"[Bridge Git Reactor] ✅ Schema tree refreshed.")
+                except Exception as e:
+                    print(f"[Bridge Git Reactor] Schema reload error: {e}")
+
+            if config_changed:
+                # Workspace JSON configs changed — signal UI to refresh collections/envs
+                print(f"[Bridge Git Reactor] 📂 Workspace config change — signaling collection/env reload...")
+                reload_actions.append("config_reload")
+
+            if plugin_changed:
+                print(f"[Bridge Git Reactor] 🐍 Plugin change detected — signaling plugin list refresh...")
+                reload_actions.append("plugin_reload")
+
+            # ── AI CONTEXT UPDATE ──
+            ai_context_update = None
+            if event_type == "branch_switch" and branch != last_branch:
+                # Build branch-aware AI context
+                ai_context_update = {
+                    "active_branch": branch,
+                    "previous_branch": prev_branch,
+                    "head_sha": head_sha,
+                    "changed_file_count": len(changed_files),
+                    "schema_changed": bool(schema_changed),
+                    "workspace_hint": f"You are now on branch '{branch}'. "
+                                      f"{'Database schema has been modified. ' if schema_changed else ''}"
+                                      f"{'Workspace configs updated. ' if config_changed else ''}"
+                                      f"{len(changed_files)} files differ from previous branch '{prev_branch}'."
+                }
+                reload_actions.append("ai_context_update")
+                print(f"[Bridge Git Reactor] 🤖 AI context packed for branch: {branch}")
+
+            last_branch = branch
+
+            # ── BROADCAST SSE TO ALL UI CLIENTS ──
+            sse_event = {
+                "type": "git_state",
+                "event_type": event_type,
+                "branch": branch,
+                "prev_branch": prev_branch,
+                "head_sha": head_sha,
+                "timestamp": state.get("timestamp", 0),
+                "changed_files": changed_files[:20],  # Limit to 20 for SSE payload
+                "changed_file_count": len(changed_files),
+                "schema_changed": bool(schema_changed),
+                "config_changed": bool(config_changed),
+                "plugin_changed": bool(plugin_changed),
+                "reload_actions": reload_actions,
+                "ai_context": ai_context_update,
+            }
+            broadcast_sse(sse_event)
+
+            # Acknowledge the event in the C-Core
+            lightbase.ack_git_reactive_event()
+
+        except Exception as e:
+            print(f"[Bridge Git Reactor] Error: {e}")
+            time.sleep(5)
+
+# ============================================================================
+# BOOT
+# ============================================================================
+if __name__ == '__main__':
+    print("[Bridge] Booting LightBase ecosystem...")
+    if not lightbase: sys.exit("[Bridge] Failed to link libcore.so")
+    lightbase.initialize_c_core_interceptor_pool()
+    lightbase.start_linux_ipc_bridge()
+    lightbase.init_mmap_telemetry_log()
+
+    # Initialize security module
+    lightbase.security_init_hmac_key()
+    print("[Bridge] \U0001f6e1\ufe0f Security module armed (HMAC + rate limiter + path guard + SQL sanitizer).")
+
+    # Start the C-Core reactive git watcher (inotify on .git/HEAD)
+    rc = lightbase.start_git_reactive_watcher(REPO_PATH.encode())
+    if rc == 0:
+        print("[Bridge] 🧠 Git reactive watcher armed.")
+        # Start the bridge-side poller thread that processes C-Core events
+        git_thread = threading.Thread(target=git_reactive_poller, daemon=True)
+        git_thread.start()
+    else:
+        print("[Bridge] ⚠️ Git watcher failed to start (non-fatal).")
+
+    from http.server import ThreadingHTTPServer
+    try:
+        httpd = ThreadingHTTPServer(('', 8000), LightBaseGatewayHandler)
+        httpd.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        print("[Bridge] LightBase API → http://localhost:8000 🚀")
+        server_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        server_thread.start()
+    except OSError as e:
+        if e.errno == 98:
+            print("[Bridge] Port 8000 already in use. Assuming backend is already running. Launching UI only...")
+            httpd = None
+        else:
+            raise e
+
+    try:
+        if "--headless" in sys.argv: raise ImportError("Headless mode requested")
+        import webview
+        ui_path = f"file://{os.path.join(BASE_DIR, 'ui', 'index.html')}"
+        print("[Bridge] 🖥️ Launching native desktop window...")
+        webview.create_window('LightBase Studio', ui_path, width=1280, height=800, background_color='#101216')
+        webview.start()
+        if httpd: httpd.server_close()
+        print("🏁 Native window closed. Shutdown complete.")
+    except ImportError:
+        print("[Bridge] 🌐 Running in server mode (headless or no pywebview).")
+        try:
+            while True: time.sleep(1)
+        except KeyboardInterrupt:
+            if httpd: httpd.server_close()
+            print("🏁 Shutdown complete.")

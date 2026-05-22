@@ -1,0 +1,10 @@
+Package: lightbase
+Version: 1.0.0-1
+Architecture: amd64
+Maintainer: Aarav <aarav@example.com>
+Installed-Size: 3595
+Depends: libc6 (>= 2.38), libgit2-1.9 (>= 1.9.0), libsqlite3-0 (>= 3.5.9), libssl3t64 (>= 3.0.0), python3, python3-webview, python3-websocket, python3-paho-mqtt
+Section: devel
+Priority: optional
+Description: A sovereign, high-performance API development ecosystem.
+ LightBase is a direct, sovereign alternative to proprietary API platforms like Postman.
