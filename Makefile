@@ -27,7 +27,7 @@ NPROC        := $(shell nproc 2>/dev/null || echo 4)
 
 # Installation paths (FHS-compliant)
 PREFIX       := /opt/lightbase
-BINDIR       := /usr/local/bin
+BINDIR       := /usr/bin
 ICONDIR      := /usr/share/icons/hicolor
 DESKTOPDIR   := /usr/share/applications
 
