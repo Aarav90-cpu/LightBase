@@ -122,16 +122,20 @@ LightBase is a zero-cloud API development studio that combines a high-performanc
 LightBase is natively available for Debian and Arch Linux package managers.
 
 #### Arch Linux (AUR)
-If you are on Arch Linux, Manjaro, or EndeavourOS, you can install LightBase directly from the Arch User Repository (AUR) using `yay` or `pacman`:
+If you are on Arch Linux, Manjaro, or EndeavourOS, you can install LightBase directly from the Arch User Repository (AUR) using `yay`:
 
 ```bash
 yay -S lightbase
-# Or download the PKGBUILD and run:
-# pacman -U lightbase-1.0.0-1-x86_64.pkg.tar.zst
+```
+OR
+```bash
+git clone https://aur.archlinux.org/lightbase.git
+cd lightbase
+makepkg -si
 ```
 
 #### Debian / Ubuntu / Mint (APT)
-For Debian-based distributions, add the LightBase apt repository and install:
+For Debian-based distributions, add the LightBase apt repository and install: <WAIT UNTIL IT GETS UPLOADED>
 
 ```bash
 sudo apt update
