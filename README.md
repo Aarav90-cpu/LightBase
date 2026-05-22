@@ -17,6 +17,8 @@
 
 LightBase is a zero-cloud API development studio that combines a high-performance C99 backend with a Python gateway bridge and a sleek browser-based UI. Every request, collection, and environment is stored as plain JSON files you can version-control with Git — no accounts, no cloud sync, no telemetry.
 
+We are having many commits and pushes right now since we are resolving make issues on debian! Sorry for the spam!
+
 ---
 
 ## ✨ Features
