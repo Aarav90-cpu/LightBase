@@ -37,8 +37,13 @@ add_library(core SHARED
         src/crypto_vault.c
 )
 
+find_library(QUICKJS_LIB NAMES quickjs qjs PATHS /usr/lib/quickjs /usr/lib/x86_64-linux-gnu /usr/local/lib /usr/lib)
+if(NOT QUICKJS_LIB)
+    message(FATAL_ERROR "Could not find quickjs library")
+endif()
+
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(core ssl crypto sqlite3 dl m quickjs pthread git2)
+target_link_libraries(core ssl crypto sqlite3 dl m ${QUICKJS_LIB} pthread git2)
 
 
 # ============================================================================
@@ -53,7 +58,7 @@ add_executable(lb-cli
 
 # Enforce explicit RPATH headers so lb-cli tracks its library files dynamically at execution runtime
 set_target_properties(lb-cli PROPERTIES LINK_FLAGS "-Wl,-rpath,/home/aarav/LightBase/dist/lib")
-target_link_libraries(lb-cli core ssl crypto sqlite3 dl m quickjs pthread git2)
+target_link_libraries(lb-cli core ssl crypto sqlite3 dl m ${QUICKJS_LIB} pthread git2)
 
 
 # ============================================================================
